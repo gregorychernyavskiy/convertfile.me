@@ -1,0 +1,319 @@
+/* Import Google Font - Poppins (Bold & Rounded) */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+
+/* Global Styles */
+body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    min-height: 100vh;
+    background: linear-gradient(to bottom right, #ffffff, #f8f9fa);
+    font-family: 'Poppins', sans-serif;
+    font-weight: 600;
+    margin: 0;
+    text-align: center;
+    color: #1E293B;
+    padding-top: 80px; /* Push content below navbar */
+}
+
+/* Stick Navbar to the Top */
+.nav-bar {
+    width: 100%;
+    position: fixed;
+    top: 0;
+    left: 0;
+    padding: 15px 30px;
+    background: #ffffff;
+    box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Navbar Logo */
+.nav-bar .logo a {
+    font-size: 24px;
+    font-weight: 700;
+    color: #38BDF8;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+/* Navigation Links */
+.nav-links {
+    display: flex;
+    gap: 20px; /* Even spacing */
+    align-items: center;
+    margin-left: auto; /* Push links to the right */
+    margin-right: 50px; /* Ensure proper spacing from the right edge */
+}
+
+/* Individual Buttons */
+.nav-links a {
+    text-decoration: none;
+    color: #1E293B;
+    font-weight: 600;
+    padding: 10px 16px; /* Ensures consistent size */
+    border-radius: 8px;
+    transition: background 0.3s, color 0.3s;
+    border: 2px solid transparent;
+    font-size: 16px;
+    white-space: nowrap; /* Prevents text wrapping */
+    display: inline-block;
+}
+
+/* Fix Hover Effect */
+.nav-links a:hover {
+    background: #38BDF8 !important; /* Ensures hover works properly */
+    border-color: #38BDF8 !important;
+    color: white !important;
+}
+
+
+/* Fix Title Overlapping */
+h1 {
+    font-size: 36px;
+    font-weight: 700;
+    color: #38BDF8;
+    text-transform: uppercase; /* Adds emphasis to the title */
+    letter-spacing: 2px; /* Adds some space between letters */
+    margin-bottom: 20px; /* Adds space below the title */
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1); /* Subtle shadow for depth */
+}
+
+/* Styling for the Simple Description Text */
+.container .simple-description {
+    font-size: 20px;
+    font-weight: 500;
+    color: #38BDF8; /* Lighter blue for contrast */
+    margin-top: 5px;
+    margin-bottom: 20px;
+    line-height: 1.6; /* Improves readability */
+    text-align: center;
+    letter-spacing: 1px; /* Slight space between letters for a cleaner look */
+    font-style: italic; /* Adds a subtle emphasis */
+}
+
+/* Optional: Add a subtle underline or border to make it stand out more */
+.container .simple-description::after {
+    content: "";
+    display: block;
+    width: 60px; /* Adjust based on preference */
+    height: 3px;
+    background-color: #38BDF8; /* Same blue color */
+    margin: 15px auto 0;
+}
+
+/* Convert Files Section */
+.container {
+    margin-top: 20px;
+    background: #ffffff;
+    padding: 40px;
+    border-radius: 16px;
+    box-shadow: 0px 6px 16px rgba(0, 0, 0, 0.1);
+    width: 600px;
+    text-align: center;
+    color: #1E293B;
+    border: 1px solid #e0e0e0;
+}
+
+/* Drop Area */
+.drop-area {
+    border: 3px dashed #38BDF8;
+    padding: 30px;
+    border-radius: 14px;
+    cursor: pointer;
+    background: #F8FAFC;
+    color: #1E293B;
+    font-weight: 700;
+    transition: background 0.3s, border-color 0.3s;
+    font-size: 18px;
+}
+
+.drop-area:hover {
+    background: #E0F2FE;
+    border-color: #2563eb;
+}
+
+/* File List */
+.file-list {
+    margin-top: 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+/* File Item */
+.file-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    font-weight: 600;
+    padding: 5px 10px;
+    background: none;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+/* Center the Remove button */
+.file-item button {
+    padding: 6px 12px;
+    border: none;
+    background-color: #FF4D4D;
+    color: white;
+    font-weight: bold;
+    border-radius: 5px;
+    cursor: pointer;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 80px;
+}
+
+.file-item button:hover {
+    background-color: #D43F3F;
+}
+
+/* Convert Options */
+.convert-options {
+    display: none;
+    margin-top: 20px;
+    font-size: 16px;
+    color: #1E293B;
+    text-align: center;
+}
+
+/* Keep "Convert to" Black */
+.convert-options label {
+    font-size: 18px;
+    font-weight: bold;
+    color: black;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* Make Dropdown Smaller with Dashed Blue Border */
+.convert-options select {
+    padding: 6px 12px;
+    font-size: 16px;
+    font-weight: bold;
+    color: black;
+    border: 2px dashed #38BDF8; /* Correct Blue */
+    border-radius: 6px;
+    background: white;
+    cursor: pointer;
+    width: auto;
+    min-width: 120px;
+    outline: none;
+    transition: 0.3s;
+}
+
+.convert-options select:hover {
+    border-color: #2563EB;
+    background: #E0F2FE;
+}
+
+/* Button & Select */
+select, button {
+    margin-top: 10px;
+    padding: 14px 22px;
+    font-size: 18px;
+    border-radius: 12px;
+    border: none;
+    font-weight: 700;
+}
+
+button {
+    background-color: #38BDF8;
+    color: white;
+    cursor: pointer;
+    transition: background 0.3s, transform 0.2s;
+}
+
+button:hover {
+    background-color: #2563eb;
+    transform: scale(1.05);
+}
+
+/* Download Link */
+#downloadLink {
+    display: none;
+    margin-top: 20px;
+    font-size: 18px;
+    color: #38BDF8;
+    text-decoration: none;
+    font-weight: 700;
+}
+
+#downloadLink:hover {
+    color: #2563eb;
+}
+
+/* Responsive Design for Mobile */
+@media (max-width: 768px) {
+    /* Make Navbar Adjust for Smaller Screens */
+    .nav-bar {
+        flex-direction: column;
+        padding: 10px 20px;
+    }
+
+    .nav-links {
+        flex-direction: column; /* Stack links on smaller screens */
+        gap: 10px;
+        margin-top: 10px;
+    }
+
+    .nav-links a {
+        width: 100%;
+        text-align: center;
+        padding: 10px;
+    }
+
+    /* Adjust Container for Mobile */
+    .container {
+        width: 90%;
+        padding: 20px;
+    }
+
+    /* Adjust Drop Area */
+    .drop-area {
+        padding: 20px;
+    }
+
+    /* Make Buttons and Dropdown Fit on Mobile */
+    .convert-options select,
+    .convert-options button {
+        width: 100%;
+    }
+}
+
+
+.selection-buttons {
+    display: flex;
+    justify-content: space-between;
+    width: 100%;
+}
+
+.selection-buttons button {
+    width: 45%; /* Makes sure buttons stay within their half */
+    text-align: center;
+}
+
+#backButton {
+    background: none;
+    border: none;
+    font-size: 18px;
+    font-weight: bold;
+    cursor: pointer;
+    color: #38BDF8;
+    margin-right: 15px;
+}
+
+#backButton:hover {
+    color: #2563eb;
+}
