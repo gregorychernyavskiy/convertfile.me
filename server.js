@@ -26,7 +26,7 @@ if (!fs.existsSync(uploadsDir)) {
 }
 
 // Supported formats
-const supportedFormats = ["jpg", "png", "tiff", "heif", "heic"];
+const supportedFormats = ["jpg", "png", "tiff"];
 
 // Convert file endpoint
 app.post("/convert", upload.array("files"), async (req, res) => {
@@ -53,14 +53,28 @@ app.post("/convert", upload.array("files"), async (req, res) => {
 
             try {
                 // Validate file type
-                if (!["image/jpg", "image/jpeg", "image/png", "image/tiff", "image/heif", "image/heic"].includes(file.mimetype)) {
-                    throw new Error("Invalid file type. Only JPG, PNG, TIFF, and HEIF/HEIC files are supported.");
+                if (!["image/jpg", "image/jpeg", "image/png", "image/tiff"].includes(file.mimetype)) {
+                    throw new Error("Invalid file type. Only JPG, PNG, and TIFF files are supported.");
                 }
 
                 // Convert the image using sharp
-                await sharp(inputPath)
-                    .toFormat(format)
-                    .toFile(outputPath);
+                const sharpInstance = sharp(inputPath);
+
+                // Special handling for TIFF format
+                if (format === "tiff") {
+                    await sharpInstance
+                        .tiff({
+                            compression: "lzw", // Use LZW compression for TIFF
+                            quality: 100,       // Adjust quality if needed
+                        })
+                        .toFile(outputPath);
+                }
+                // Handle other formats (JPG, PNG, etc.)
+                else {
+                    await sharpInstance
+                        .toFormat(format)
+                        .toFile(outputPath);
+                }
 
                 if (fs.existsSync(outputPath)) {
                     console.log("File conversion successful:", outputPath);

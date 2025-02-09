@@ -22,6 +22,25 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function handleFiles(files) {
+        // Check if adding new files will exceed the limit of 3
+        if (selectedFiles.size + files.length > 3) {
+            alert("You can only select a maximum of 3 files.");
+            return;
+        }
+
+        // Check if all files are of the same type
+        const firstFileType = files[0].name.split('.').pop().toLowerCase();
+        const isSameType = Array.from(files).every(file => {
+            const fileType = file.name.split('.').pop().toLowerCase();
+            return fileType === firstFileType;
+        });
+
+        if (!isSameType) {
+            alert("All selected files must be of the same type.");
+            return;
+        }
+
+        // Add files to the selectedFiles map
         Array.from(files).forEach(file => {
             if (!selectedFiles.has(file.name)) {
                 selectedFiles.set(file.name, file);
@@ -88,10 +107,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
 
     window.convertFile = function (event) {
-        // Prevent the form from submitting and reloading the page
-        if (event) {
-            event.preventDefault();
-        }
+        event.preventDefault(); // Prevent form submission
 
         if (selectedFiles.size === 0) {
             alert("Please select at least one file.");
@@ -133,6 +149,11 @@ document.addEventListener("DOMContentLoaded", function () {
             downloadLink.download = `converted.${format}`;
             downloadLink.style.display = "block";
             downloadLink.textContent = "Download Converted File";
+
+            // Clear selected files and reset the file list
+            selectedFiles.clear();
+            fileList.innerHTML = "";
+            updateFileCount();
         })
         .catch(error => {
             console.error("Error:", error);

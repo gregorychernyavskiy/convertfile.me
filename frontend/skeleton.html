@@ -42,15 +42,16 @@
 
             <!-- Convert Options -->
             <div class="convert-options" id="convertOptions" style="display: none;">
-                <label for="formatSelect">Convert to:</label>
-                <select id="formatSelect">
-                    <option value="jpg">JPG</option>
-                    <option value="png">PNG</option>
-                    <option value="tiff">TIFF</option>
-                    <option value="heif">HEIF (HEIC)</option>
-                </select>
-                <p id="fileCount">Files Selected: 0</p>
-                <button onclick="convertFile(event)">Convert</button>
+                <form onsubmit="convertFile(event)">
+                    <label for="formatSelect">Convert to:</label>
+                    <select id="formatSelect">
+                        <option value="jpg">JPG</option>
+                        <option value="png">PNG</option>
+                        <option value="tiff">TIFF</option>
+                    </select>
+                    <p id="fileCount">Files Selected: 0</p>
+                    <button type="submit">Convert</button>
+                </form>
             </div>
 
             <!-- Combine PDF Options -->
