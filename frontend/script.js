@@ -96,6 +96,50 @@ document.addEventListener("DOMContentLoaded", function () {
         handleFiles(event.dataTransfer.files);
     });
 
+    window.convertFile = function (event) {
+        event.preventDefault(); // Prevent the form from submitting
+
+        if (selectedFiles.size === 0) {
+            alert("Please select at least one file.");
+            return;
+        }
+
+        const format = document.getElementById("formatSelect").value;
+
+        let formData = new FormData();
+        selectedFiles.forEach(file => formData.append("files", file));
+        formData.append("output_format", format);
+
+        fetch("http://localhost:3000/convert", {
+            method: "POST",
+            body: formData
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(err => {
+                    throw new Error(err.error || "Conversion failed.");
+                });
+            }
+            return response.blob();
+        })
+        .then(blob => {
+            let url = window.URL.createObjectURL(blob);
+            downloadLink.href = url;
+            downloadLink.download = `converted.${format}`;
+            downloadLink.style.display = "block";
+            downloadLink.textContent = `Download Converted ${format.toUpperCase()}`;
+
+            // Clear selected files and reset the file list
+            selectedFiles.clear();
+            fileList.innerHTML = "";
+            updateFileCount();
+        })
+        .catch(error => {
+            console.error("Error:", error);
+            alert(error.message || "An error occurred during conversion. Please try again.");
+        });
+    };
+
     window.combinePDFs = function () {
         if (selectedFiles.size === 0) {
             alert("Please select at least one file.");
