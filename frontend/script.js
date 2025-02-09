@@ -15,13 +15,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
     function updateFileCount() {
         document.getElementById("fileCount").textContent = `Files Selected: ${selectedFiles.size}`;
-        document.getElementById("pdfFileCount").textContent = `PDFs Selected: ${[...selectedFiles.values()].filter(f => f.type === "application/pdf").length}`;
     }
 
     function formatFileName(name) {
         return name.length > 30 ? name.substring(0, 28) + "..." : name;
     }
-    
+
     function handleFiles(files) {
         Array.from(files).forEach(file => {
             if (!selectedFiles.has(file.name)) {
@@ -35,19 +34,12 @@ document.addEventListener("DOMContentLoaded", function () {
                     selectedFiles.delete(file.name);
                     fileItem.remove();
                     updateFileCount();
-                    checkPDFRequirement();
                 };
                 fileItem.appendChild(removeBtn);
                 fileList.appendChild(fileItem);
             }
         });
         updateFileCount();
-        checkPDFRequirement();
-    }
-
-    function checkPDFRequirement() {
-        let allPDFs = [...selectedFiles.values()].every(file => file.type === "application/pdf");
-        document.getElementById("combineOptions").style.display = allPDFs && selectedFiles.size >= 2 ? "block" : "none";
     }
 
     window.selectTask = function (task) {
@@ -95,60 +87,56 @@ document.addEventListener("DOMContentLoaded", function () {
         handleFiles(event.dataTransfer.files);
     });
 
-    window.convertFile = function () {
+    window.convertFile = function (event) {
+        // Prevent the form from submitting and reloading the page
+        if (event) {
+            event.preventDefault();
+        }
+
         if (selectedFiles.size === 0) {
             alert("Please select at least one file.");
             return;
         }
 
+        let format = document.getElementById("formatSelect").value;
+
+        // Check if any file is already in the target format
+        let isSameFormat = [...selectedFiles.values()].some(file => {
+            let fileExtension = file.name.split('.').pop().toLowerCase();
+            return fileExtension === format;
+        });
+
+        if (isSameFormat) {
+            alert(`You cannot convert a file to the same format (${format}). Please select a different format.`);
+            return;
+        }
+
         let formData = new FormData();
         selectedFiles.forEach(file => formData.append("files", file));
-
-        let format = document.getElementById("formatSelect").value;
         formData.append("output_format", format);
 
-        fetch("/convert", {
+        fetch("http://localhost:3000/convert", {
             method: "POST",
             body: formData
         })
-        .then(response => response.blob())
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(err => {
+                    throw new Error(err.error || "Conversion failed.");
+                });
+            }
+            return response.blob();
+        })
         .then(blob => {
             let url = window.URL.createObjectURL(blob);
             downloadLink.href = url;
-            downloadLink.download = `converted_files.${format}`;
+            downloadLink.download = `converted.${format}`;
             downloadLink.style.display = "block";
-            downloadLink.textContent = "Download Converted Files";
+            downloadLink.textContent = "Download Converted File";
         })
-        .catch(error => console.error("Error:", error));
-    };
-
-    window.combinePDFs = function () {
-        if (selectedFiles.size === 0) {
-            alert("Please select at least two PDF files.");
-            return;
-        }
-
-        let allPDFs = [...selectedFiles.values()].every(file => file.type === "application/pdf");
-        if (!allPDFs) {
-            alert("Only PDF files can be combined.");
-            return;
-        }
-
-        let formData = new FormData();
-        selectedFiles.forEach(file => formData.append("pdfs", file));
-
-        fetch("/combine", {
-            method: "POST",
-            body: formData
-        })
-        .then(response => response.blob())
-        .then(blob => {
-            let url = window.URL.createObjectURL(blob);
-            downloadLink.href = url;
-            downloadLink.download = "combined.pdf";
-            downloadLink.style.display = "block";
-            downloadLink.textContent = "Download Combined PDF";
-        })
-        .catch(error => console.error("Error:", error));
+        .catch(error => {
+            console.error("Error:", error);
+            alert(error.message || "An error occurred during conversion. Please try again.");
+        });
     };
 });
