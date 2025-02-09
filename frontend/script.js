@@ -12,9 +12,11 @@ document.addEventListener("DOMContentLoaded", function () {
     let fileList = document.getElementById("fileList");
     let backButton = document.getElementById("backButton");
     let downloadLink = document.getElementById("downloadLink");
+    let pdfFileCount = document.getElementById("pdfFileCount");
 
     function updateFileCount() {
         document.getElementById("fileCount").textContent = `Files Selected: ${selectedFiles.size}`;
+        pdfFileCount.textContent = `PDFs Selected: ${Array.from(selectedFiles.values()).filter(file => file.name.endsWith('.pdf')).length}`;
     }
 
     function formatFileName(name) {
@@ -25,18 +27,6 @@ document.addEventListener("DOMContentLoaded", function () {
         // Check if adding new files will exceed the limit of 3
         if (selectedFiles.size + files.length > 3) {
             alert("You can only select a maximum of 3 files.");
-            return;
-        }
-
-        // Check if all files are of the same type
-        const firstFileType = files[0].name.split('.').pop().toLowerCase();
-        const isSameType = Array.from(files).every(file => {
-            const fileType = file.name.split('.').pop().toLowerCase();
-            return fileType === firstFileType;
-        });
-
-        if (!isSameType) {
-            alert("All selected files must be of the same type.");
             return;
         }
 
@@ -106,39 +96,23 @@ document.addEventListener("DOMContentLoaded", function () {
         handleFiles(event.dataTransfer.files);
     });
 
-    window.convertFile = function (event) {
-        event.preventDefault(); // Prevent form submission
-
+    window.combinePDFs = function () {
         if (selectedFiles.size === 0) {
             alert("Please select at least one file.");
             return;
         }
 
-        let format = document.getElementById("formatSelect").value;
-
-        // Check if any file is already in the target format
-        let isSameFormat = [...selectedFiles.values()].some(file => {
-            let fileExtension = file.name.split('.').pop().toLowerCase();
-            return fileExtension === format;
-        });
-
-        if (isSameFormat) {
-            alert(`You cannot convert a file to the same format (${format}). Please select a different format.`);
-            return;
-        }
-
         let formData = new FormData();
         selectedFiles.forEach(file => formData.append("files", file));
-        formData.append("output_format", format);
 
-        fetch("http://localhost:3000/convert", {
+        fetch("http://localhost:3000/combine", {
             method: "POST",
             body: formData
         })
         .then(response => {
             if (!response.ok) {
                 return response.json().then(err => {
-                    throw new Error(err.error || "Conversion failed.");
+                    throw new Error(err.error || "Combination failed.");
                 });
             }
             return response.blob();
@@ -146,9 +120,9 @@ document.addEventListener("DOMContentLoaded", function () {
         .then(blob => {
             let url = window.URL.createObjectURL(blob);
             downloadLink.href = url;
-            downloadLink.download = `converted.${format}`;
+            downloadLink.download = "combined.pdf";
             downloadLink.style.display = "block";
-            downloadLink.textContent = "Download Converted File";
+            downloadLink.textContent = "Download Combined PDF";
 
             // Clear selected files and reset the file list
             selectedFiles.clear();
@@ -157,7 +131,7 @@ document.addEventListener("DOMContentLoaded", function () {
         })
         .catch(error => {
             console.error("Error:", error);
-            alert(error.message || "An error occurred during conversion. Please try again.");
+            alert(error.message || "An error occurred during combination. Please try again.");
         });
     };
 });

@@ -4,6 +4,7 @@ const fs = require("fs");
 const path = require("path");
 const sharp = require("sharp");
 const cors = require("cors");
+const { PDFDocument } = require("pdf-lib");
 
 // Initialize Express app
 const app = express();
@@ -120,6 +121,64 @@ app.post("/convert", upload.array("files"), async (req, res) => {
     } catch (error) {
         console.error("Conversion Error:", error);
         res.status(500).json({ error: error.message || "Conversion failed. Please try again." });
+    }
+});
+
+// Combine files endpoint
+app.post("/combine", upload.array("files"), async (req, res) => {
+    try {
+        if (!req.files || req.files.length === 0) {
+            return res.status(400).json({ error: "No files uploaded." });
+        }
+
+        const pdfDoc = await PDFDocument.create();
+
+        for (let file of req.files) {
+            const inputPath = file.path;
+
+            if (file.mimetype === "application/pdf") {
+                const pdfBytes = fs.readFileSync(inputPath);
+                const externalPdf = await PDFDocument.load(pdfBytes);
+                const copiedPages = await pdfDoc.copyPages(externalPdf, externalPdf.getPageIndices());
+                copiedPages.forEach(page => pdfDoc.addPage(page));
+            } else if (["image/jpg", "image/jpeg", "image/png", "image/tiff"].includes(file.mimetype)) {
+                const image = await pdfDoc.embedJpg(fs.readFileSync(inputPath));
+                const page = pdfDoc.addPage([image.width, image.height]);
+                page.drawImage(image, {
+                    x: 0,
+                    y: 0,
+                    width: image.width,
+                    height: image.height,
+                });
+            } else {
+                throw new Error("Unsupported file type.");
+            }
+
+            // Clean up the original uploaded file
+            if (fs.existsSync(inputPath)) {
+                fs.unlinkSync(inputPath);
+            }
+        }
+
+        const pdfBytes = await pdfDoc.save();
+        const outputPath = path.join(uploadsDir, `combined.pdf`);
+        fs.writeFileSync(outputPath, pdfBytes);
+
+        res.download(outputPath, "combined.pdf", (err) => {
+            if (err) {
+                console.error("Error sending file:", err);
+                res.status(500).json({ error: "Error sending file." });
+            } else {
+                console.log("File sent successfully.");
+            }
+            // Clean up the combined file after sending
+            if (fs.existsSync(outputPath)) {
+                fs.unlinkSync(outputPath);
+            }
+        });
+    } catch (error) {
+        console.error("Combination Error:", error);
+        res.status(500).json({ error: error.message || "Combination failed. Please try again." });
     }
 });
 

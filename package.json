@@ -19,6 +19,7 @@
   "homepage": "https://github.com/gregorychernyavskiy/convertfile.me#readme",
   "description": "",
   "dependencies": {
+    "archiver": "^7.0.1",
     "cors": "^2.8.5",
     "express": "^4.21.2",
     "heic-convert": "^2.1.0",
