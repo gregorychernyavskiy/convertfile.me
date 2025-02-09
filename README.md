@@ -1,7 +1,9 @@
-**convertfile.me**
-convertfile.me is a simple and efficient tool for converting image files (PNG, JPG, TIFF) and merging PDFs. Enjoy a seamless, user-friendly experience with drag-and-drop uploads.
+# convertfile.me
 
-🚀 Features
-Image Conversion: Convert PNG, JPG, and TIFF files to other supported formats.
-PDF Merging: Combine multiple PDF files into a single, unified document.
-Drag & Drop Uploads: Effortlessly upload files with a user-friendly drag-and-drop interface.
+convertfile.me is a fast, simple, and efficient tool designed for converting image files and merging PDFs. With a clean, user-friendly interface, you can easily upload your files via drag-and-drop and perform tasks like image format conversion and PDF merging.
+
+## 🚀 Features
+
+- **Image Conversion**: Effortlessly convert PNG, JPG, and TIFF files to other supported formats.
+- **PDF Merging**: Combine multiple PDF files into one seamless, unified document.
+- **Drag-and-Drop Uploads**: Upload files quickly and easily using the intuitive drag-and-drop interface.
