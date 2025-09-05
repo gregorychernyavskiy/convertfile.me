@@ -17,15 +17,24 @@ async function connectToDatabase() {
         }
         
         client = new MongoClient(uri, {
-            serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
-            connectTimeoutMS: 5000,
+            serverSelectionTimeoutMS: 3000, // Reduced timeout to 3s
+            connectTimeoutMS: 3000,
+            socketTimeoutMS: 3000,
+            maxPoolSize: 1, // Limit connection pool for serverless
         });
-        await client.connect();
+        
+        // Set a timeout for the entire connection process
+        const connectPromise = client.connect();
+        const timeoutPromise = new Promise((_, reject) => {
+            setTimeout(() => reject(new Error('Connection timeout')), 4000);
+        });
+        
+        await Promise.race([connectPromise, timeoutPromise]);
         db = client.db('convertfile');
-        console.log('Connected to MongoDB');
+        console.log('Connected to MongoDB successfully');
         return db;
     } catch (error) {
-        console.error('MongoDB connection error (database features disabled):', error);
+        console.error('MongoDB connection error (database features disabled):', error.message);
         return null;
     }
 }

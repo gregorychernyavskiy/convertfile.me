@@ -5,6 +5,37 @@ const path = require("path");
 const sharp = require("sharp");
 const { PDFDocument } = require("pdf-lib");
 
+// Load environment variables
+require('dotenv').config();
+
+// Database functions with error handling
+let loadStats, trackEvent;
+try {
+    const db = require('./database');
+    loadStats = db.loadStats;
+    trackEvent = db.trackEvent;
+    console.log('Database module loaded successfully');
+    
+    // Test connection asynchronously (non-blocking)
+    setTimeout(async () => {
+        try {
+            await db.connectToDatabase();
+            console.log('MongoDB connection test completed');
+        } catch (error) {
+            console.warn('MongoDB connection test failed (non-critical):', error.message);
+        }
+    }, 1000);
+} catch (error) {
+    console.warn('Database module not available, using fallbacks:', error.message);
+    loadStats = async () => ({
+        totalVisits: 0,
+        totalConversions: 0,
+        totalCombines: 0,
+        totalPdfToWord: 0
+    });
+    trackEvent = async () => {};
+}
+
 // Initialize Express app
 const app = express();
 
@@ -33,29 +64,34 @@ app.use((req, res, next) => {
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Simple in-memory stats (resets on each serverless function restart)
-let stats = {
-    totalVisits: 0,
-    totalConversions: 0,
-    totalCombines: 0,
-    totalPdfToWord: 0,
-    dailyStats: {}
-};
+// API endpoint to get stats
+app.get('/api/stats', async (req, res) => {
+    try {
+        const stats = await loadStats();
+        res.json(stats);
+    } catch (error) {
+        console.error('Error fetching stats:', error);
+        // Return default stats if database is unavailable
+        res.json({
+            totalVisits: 0,
+            totalConversions: 0,
+            totalCombines: 0,
+            totalPdfToWord: 0,
+            error: 'Database unavailable'
+        });
+    }
+});
 
-// Middleware to track page visits
+// Middleware to track page visits with MongoDB
 app.use(async (req, res, next) => {
     // Only track visits to main pages, not assets
     if (req.path === '/' || req.path.endsWith('.html')) {
         try {
-            stats.totalVisits++;
-            const today = new Date().toISOString().split('T')[0];
-            if (!stats.dailyStats[today]) {
-                stats.dailyStats[today] = { visits: 0, conversions: 0, combines: 0, pdfToWord: 0 };
-            }
-            stats.dailyStats[today].visits++;
-            console.log(`Visit tracked: ${req.path}, Total visits: ${stats.totalVisits}`);
+            await trackEvent('visit');
+            console.log(`Visit tracked: ${req.path}`);
         } catch (error) {
-            console.error('Error tracking visit:', error);
+            console.error('Error tracking visit (non-critical):', error);
+            // Continue processing the request even if tracking fails
         }
     }
     next();
@@ -70,16 +106,7 @@ app.get('/api/health', (req, res) => {
         status: 'ok', 
         timestamp: new Date().toISOString(),
         env: process.env.NODE_ENV || 'development',
-        visits: stats.totalVisits
-    });
-});
-
-// Stats endpoint with real data
-app.get('/api/stats', (req, res) => {
-    res.json({
-        ...stats,
-        lastUpdated: new Date().toISOString(),
-        note: 'Stats reset on serverless function restart'
+        mongodb: process.env.MONGODB_URI ? 'configured' : 'not configured'
     });
 });
 
@@ -93,13 +120,12 @@ const supportedMimetypes = [
 // Simple file conversion endpoint
 app.post("/convert", upload.array("files"), async (req, res) => {
     try {
-        // Track conversion
-        stats.totalConversions++;
-        const today = new Date().toISOString().split('T')[0];
-        if (!stats.dailyStats[today]) {
-            stats.dailyStats[today] = { visits: 0, conversions: 0, combines: 0, pdfToWord: 0 };
+        // Track conversion with MongoDB
+        try {
+            await trackEvent('conversion');
+        } catch (trackError) {
+            console.error('Error tracking conversion (non-critical):', trackError);
         }
-        stats.dailyStats[today].conversions++;
         
         const format = req.body.output_format?.toLowerCase();
         if (!format || !supportedFormats.includes(format)) {
@@ -124,7 +150,7 @@ app.post("/convert", upload.array("files"), async (req, res) => {
             }
         });
 
-        console.log(`Conversion tracked: ${req.files.length} files to ${format}, Total: ${stats.totalConversions}`);
+        console.log(`Conversion tracked: ${req.files.length} files to ${format}`);
 
         res.json({ 
             message: "Conversion endpoint working!",
@@ -141,13 +167,12 @@ app.post("/convert", upload.array("files"), async (req, res) => {
 // Simple combine endpoint
 app.post("/combine", upload.array("files"), async (req, res) => {
     try {
-        // Track combine
-        stats.totalCombines++;
-        const today = new Date().toISOString().split('T')[0];
-        if (!stats.dailyStats[today]) {
-            stats.dailyStats[today] = { visits: 0, conversions: 0, combines: 0, pdfToWord: 0 };
+        // Track combine with MongoDB
+        try {
+            await trackEvent('combine');
+        } catch (trackError) {
+            console.error('Error tracking combine (non-critical):', trackError);
         }
-        stats.dailyStats[today].combines++;
         
         if (!req.files || req.files.length === 0) {
             return res.status(400).json({ error: "No files uploaded." });
@@ -166,7 +191,7 @@ app.post("/combine", upload.array("files"), async (req, res) => {
             }
         });
 
-        console.log(`Combine tracked: ${req.files.length} files, Total: ${stats.totalCombines}`);
+        console.log(`Combine tracked: ${req.files.length} files`);
 
         res.json({ 
             message: "Combine endpoint working!",
@@ -176,6 +201,57 @@ app.post("/combine", upload.array("files"), async (req, res) => {
     } catch (error) {
         console.error("Combine error:", error);
         res.status(500).json({ error: error.message || "Combine failed" });
+    }
+});
+
+// PDF to Word endpoint
+app.post("/pdf-to-word", upload.array("files"), async (req, res) => {
+    try {
+        // Track PDF to Word conversion with MongoDB
+        try {
+            await trackEvent('pdfToWord');
+        } catch (trackError) {
+            console.error('Error tracking PDF to Word (non-critical):', trackError);
+        }
+        
+        if (!req.files || req.files.length === 0) {
+            return res.status(400).json({ error: "No files uploaded." });
+        }
+
+        // Validate that uploaded files are PDFs
+        const pdfFiles = req.files.filter(file => 
+            file.mimetype === 'application/pdf' || 
+            file.originalname.toLowerCase().endsWith('.pdf')
+        );
+
+        if (pdfFiles.length === 0) {
+            return res.status(400).json({ error: "No PDF files found. Please upload PDF files only." });
+        }
+
+        // For now, just return success to test the endpoint
+        const results = pdfFiles.map(file => ({
+            original: file.originalname,
+            size: file.size,
+            outputFormat: 'docx'
+        }));
+
+        // Clean up uploaded files
+        req.files.forEach(file => {
+            if (fs.existsSync(file.path)) {
+                fs.unlinkSync(file.path);
+            }
+        });
+
+        console.log(`PDF to Word tracked: ${pdfFiles.length} files`);
+
+        res.json({ 
+            message: "PDF to Word endpoint working!",
+            files: results
+        });
+
+    } catch (error) {
+        console.error("PDF to Word error:", error);
+        res.status(500).json({ error: error.message || "PDF to Word conversion failed" });
     }
 });
 
