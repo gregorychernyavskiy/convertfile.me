@@ -3,28 +3,39 @@ const { MongoClient } = require('mongodb');
 let client;
 let db;
 
-// MongoDB connection
+// MongoDB connection with better error handling
 async function connectToDatabase() {
     if (db) {
         return db;
     }
 
     try {
-        const uri = process.env.MONGODB_URI || 'mongodb://localhost:27017';
-        client = new MongoClient(uri);
+        const uri = process.env.MONGODB_URI;
+        if (!uri) {
+            console.warn('MONGODB_URI not found in environment variables. Database features will be disabled.');
+            return null;
+        }
+        
+        client = new MongoClient(uri, {
+            serverSelectionTimeoutMS: 5000, // Timeout after 5s instead of 30s
+            connectTimeoutMS: 5000,
+        });
         await client.connect();
         db = client.db('convertfile');
         console.log('Connected to MongoDB');
         return db;
     } catch (error) {
-        console.error('MongoDB connection error:', error);
-        throw error;
+        console.error('MongoDB connection error (database features disabled):', error);
+        return null;
     }
 }
 
-// Get stats collection
+// Get stats collection with error handling
 async function getStatsCollection() {
     const database = await connectToDatabase();
+    if (!database) {
+        throw new Error('Database not available');
+    }
     return database.collection('stats');
 }
 

@@ -1,6 +1,18 @@
 document.addEventListener("DOMContentLoaded", function () {
     let selectedFiles = new Map();
     
+    // Determine the base API URL
+    const getApiBaseUrl = () => {
+        // If we're on localhost, use localhost:3000
+        if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+            return 'http://localhost:3000';
+        }
+        // Otherwise, use the current origin (for serverless deployment)
+        return window.location.origin;
+    };
+    
+    const API_BASE_URL = getApiBaseUrl();
+    
     // Get elements that exist on current page
     let selectionButtons = document.getElementById("selectionButtons");
     let convertOptions = document.getElementById("convertOptions");
@@ -24,7 +36,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function loadStats() {
-        fetch('/api/stats')
+        fetch(`${API_BASE_URL}/api/stats`)
             .then(response => response.json())
             .then(stats => {
                 updateStatsDisplay(stats);
@@ -270,7 +282,7 @@ document.addEventListener("DOMContentLoaded", function () {
             convertBtn.disabled = true;
         }
         
-        fetch("http://localhost:3000/convert", {
+        fetch(`${API_BASE_URL}/convert`, {
             method: "POST",
             body: formData
         })
@@ -341,7 +353,7 @@ document.addEventListener("DOMContentLoaded", function () {
             combineBtn.disabled = true;
         }
 
-        fetch("http://localhost:3000/combine", {
+        fetch(`${API_BASE_URL}/combine`, {
             method: "POST",
             body: formData
         })
@@ -421,7 +433,7 @@ document.addEventListener("DOMContentLoaded", function () {
             convertBtn.disabled = true;
         }
         
-        fetch("http://localhost:3000/pdf-to-word", {
+        fetch(`${API_BASE_URL}/pdf-to-word`, {
             method: "POST",
             body: formData
         })

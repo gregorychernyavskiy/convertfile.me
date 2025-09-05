@@ -20,6 +20,15 @@ const upload = multer({ dest: "uploads/" });
 // Enable CORS
 app.use(cors());
 
+// Add global error handler
+process.on('uncaughtException', (error) => {
+    console.error('Uncaught Exception:', error);
+});
+
+process.on('unhandledRejection', (reason, promise) => {
+    console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+});
+
 // API endpoint to get stats
 app.get('/api/stats', async (req, res) => {
     try {
@@ -27,18 +36,25 @@ app.get('/api/stats', async (req, res) => {
         res.json(stats);
     } catch (error) {
         console.error('Error fetching stats:', error);
-        res.status(500).json({ error: 'Failed to fetch stats' });
+        // Return default stats if database is unavailable
+        res.json({
+            totalVisits: 0,
+            totalConversions: 0,
+            totalCombines: 0,
+            totalPdfToWord: 0
+        });
     }
 });
 
-// Middleware to track page visits
+// Middleware to track page visits with error handling
 app.use(async (req, res, next) => {
     // Only track visits to main pages, not assets
     if (req.path === '/' || req.path.endsWith('.html')) {
         try {
             await trackEvent('visit');
         } catch (error) {
-            console.error('Error tracking visit:', error);
+            console.error('Error tracking visit (non-critical):', error);
+            // Continue processing the request even if tracking fails
         }
     }
     next();
@@ -56,10 +72,25 @@ app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'frontend', 'index.html'));
 });
 
+// Health check endpoint
+app.get('/api/health', (req, res) => {
+    res.json({ 
+        status: 'ok', 
+        timestamp: new Date().toISOString(),
+        mongodb: process.env.MONGODB_URI ? 'configured' : 'not configured'
+    });
+});
+
 // Ensure uploads directory exists
 const uploadsDir = path.join(__dirname, "uploads");
-if (!fs.existsSync(uploadsDir)) {
-    fs.mkdirSync(uploadsDir);
+try {
+    if (!fs.existsSync(uploadsDir)) {
+        fs.mkdirSync(uploadsDir, { recursive: true });
+        console.log('Created uploads directory');
+    }
+} catch (error) {
+    console.error('Warning: Could not create uploads directory:', error);
+    console.log('Files will be handled in memory or temporary directories');
 }
 
 // Supported formats
@@ -72,8 +103,12 @@ const supportedMimetypes = [
 // Convert file endpoint
 app.post("/convert", upload.array("files"), async (req, res) => {
     try {
-        // Track conversion event
-        await trackEvent('conversion');
+        // Track conversion event (non-critical)
+        try {
+            await trackEvent('conversion');
+        } catch (trackError) {
+            console.error('Error tracking conversion (non-critical):', trackError);
+        }
         
         const format = req.body.output_format.toLowerCase();
         if (!format || !supportedFormats.includes(format)) {
@@ -174,8 +209,12 @@ app.post("/convert", upload.array("files"), async (req, res) => {
 // Combine files endpoint
 app.post("/combine", upload.array("files"), async (req, res) => {
     try {
-        // Track combine event
-        await trackEvent('combine');
+        // Track combine event (non-critical)
+        try {
+            await trackEvent('combine');
+        } catch (trackError) {
+            console.error('Error tracking combine (non-critical):', trackError);
+        }
         
         if (!req.files || req.files.length === 0) {
             return res.status(400).json({ error: "No files uploaded." });
@@ -256,8 +295,12 @@ app.post("/combine", upload.array("files"), async (req, res) => {
 // PDF to Word conversion endpoint
 app.post("/pdf-to-word", upload.array("files"), async (req, res) => {
     try {
-        // Track PDF to Word conversion event
-        await trackEvent('pdfToWord');
+        // Track PDF to Word conversion event (non-critical)
+        try {
+            await trackEvent('pdfToWord');
+        } catch (trackError) {
+            console.error('Error tracking PDF to Word (non-critical):', trackError);
+        }
         
         const format = req.body.output_format || "docx";
         if (!["docx", "doc"].includes(format)) {
@@ -365,7 +408,15 @@ app.post("/pdf-to-word", upload.array("files"), async (req, res) => {
     }
 });
 
-// Start the server
-app.listen(3000, () => {
-    console.log("Server running on http://localhost:3000");
-});
+// Start the server (only in development)
+const PORT = process.env.PORT || 3000;
+if (process.env.NODE_ENV !== 'production') {
+    app.listen(PORT, () => {
+        console.log(`Server running on port ${PORT}`);
+        console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+        console.log(`MongoDB URI configured: ${process.env.MONGODB_URI ? 'Yes' : 'No'}`);
+    });
+}
+
+// Export the app for serverless deployment
+module.exports = app;
