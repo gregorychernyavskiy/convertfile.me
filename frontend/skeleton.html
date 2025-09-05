@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ConvertFile.me</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="nav-bar">
+        <div class="logo">
+            <a href="/" onclick="reloadPage(); return false;">ConvertFile.me</a>
+        </div>
+        <!-- Removed Log In and Sign Up links -->
+    </div>
+
+    <!-- Dynamic Title -->
+    <h1 id="pageTitle">Choose Your Selection</h1>
+
+    <div class="container" style="position: relative;">
+        <!-- Back Button Adjusted to Only Show Arrow and Moved Higher to the Left -->
+        <button id="backButton" onclick="goBack()" style="display: none; position: absolute; top: -20px; left: -10px; background: none; border: none; font-size: 20px; color: #38BDF8; cursor: pointer;">&larr;</button>
+
+        <!-- Selection Buttons -->
+        <div class="selection-buttons" id="selectionButtons">
+            <button id="convertFilesBtn" onclick="selectTask('convert')">Convert Files</button>
+            <button id="combinePdfsBtn" onclick="selectTask('combine')">Combine PDFs</button>
+        </div>
+
+        <!-- File Upload Section (Initially Hidden) -->
+        <div class="file-section" id="fileSection" style="display: none;">
+            <div class="drop-area" onclick="document.getElementById('fileInput').click();">
+                <p>Click or Drag & Drop to Upload Files</p>
+                <input type="file" id="fileInput" multiple style="display: none;">
+            </div>
+
+            <!-- File List -->
+            <div class="file-list" id="fileList"></div>
+
+            <!-- Convert Options -->
+            <div class="convert-options" id="convertOptions" style="display: none;">
+                <form onsubmit="convertFile(event)">
+                    <label for="formatSelect">Convert to:</label>
+                    <select id="formatSelect">
+                        <option value="jpg">JPG</option>
+                        <option value="png">PNG</option>
+                        <option value="tiff">TIFF</option>
+                        <option value="pdf">PDF</option>
+                        <option value="heic">HEIC</option>
+                        <option value="gif">GIF</option>
+                        <option value="bmp">BMP</option>
+                        <option value="webp">WEBP</option>
+                        <option value="avif">AVIF</option>
+                        <option value="svg">SVG</option>
+                    </select>
+                    <p id="fileCount">Files Selected: 0</p>
+                    <button type="submit">Convert</button>
+                </form>
+            </div>
+
+            <!-- Combine PDF Options -->
+            <div class="combine-options" id="combineOptions" style="display: none;">
+                <p id="pdfFileCount">PDFs Selected: 0</p>
+                <button onclick="combinePDFs()">Combine to PDF</button>
+            </div>
+        </div>
+
+        <!-- Download Link -->
+        <a id="downloadLink" style="display: none;">Download File</a>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

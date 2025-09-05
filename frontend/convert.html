@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Convert Files - ConvertFile.me</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="nav-bar">
+        <div class="logo">
+            <a href="index.html">ConvertFile.me</a>
+        </div>
+    </div>
+    <h1 id="pageTitle">Convert Files</h1>
+    <div class="container" style="position: relative;">
+        <!-- Back Arrow Button -->
+        <button id="backButton" onclick="window.location.href='index.html'" style="position: absolute; top: -20px; left: -10px; background: none; border: none; font-size: 20px; color: #38BDF8; cursor: pointer;">&larr;</button>
+        
+        <div class="drop-area" onclick="document.getElementById('fileInput').click();">
+            <p>Click or Drag & Drop to Upload Files</p>
+            <input type="file" id="fileInput" multiple style="display: none;">
+        </div>
+        
+        <!-- File List -->
+        <div class="file-list" id="fileList"></div>
+        
+        <!-- Convert Options - Always Visible -->
+        <div class="convert-options" id="convertOptions" style="display: block; margin-top: 20px;">
+            <form onsubmit="convertFile(event)">
+                <label for="formatSelect">CONVERT TO:</label>
+                <select id="formatSelect">
+                    <option value="jpg">JPG</option>
+                    <option value="png">PNG</option>
+                    <option value="tiff">TIFF</option>
+                    <option value="pdf">PDF</option>
+                    <option value="heic">HEIC</option>
+                    <option value="gif">GIF</option>
+                    <option value="bmp">BMP</option>
+                    <option value="webp">WEBP</option>
+                    <option value="avif">AVIF</option>
+                    <option value="svg">SVG</option>
+                </select>
+                <p id="fileCount">Files Selected: 0</p>
+                <button type="submit">Convert</button>
+            </form>
+        </div>
+        
+        <a id="downloadLink" style="display: none;">Download File</a>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>

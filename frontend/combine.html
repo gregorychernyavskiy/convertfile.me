@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Combine PDFs - ConvertFile.me</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="nav-bar">
+        <div class="logo">
+            <a href="index.html">ConvertFile.me</a>
+        </div>
+    </div>
+    <h1 id="pageTitle">Combine PDFs</h1>
+    <div class="container" style="position: relative;">
+        <!-- Back Arrow Button -->
+        <button id="backButton" onclick="window.location.href='index.html'" style="position: absolute; top: -20px; left: -10px; background: none; border: none; font-size: 20px; color: #38BDF8; cursor: pointer;">&larr;</button>
+        
+        <div class="drop-area" onclick="document.getElementById('fileInput').click();">
+            <p>Click or Drag & Drop to Upload Files</p>
+            <input type="file" id="fileInput" multiple style="display: none;">
+        </div>
+        
+        <div class="file-list" id="fileList"></div>
+        
+        <div class="combine-options" id="combineOptions" style="display: block; margin-top: 20px;">
+            <p id="fileCount">Files Selected: 0</p>
+            <button onclick="combinePDFs()">Combine to PDF</button>
+        </div>
+        
+        <a id="downloadLink" style="display: none;">Download File</a>
+    </div>
+    <script src="script.js"></script>
+</body>
+</html>
