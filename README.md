@@ -50,10 +50,12 @@ cp .env.example .env
 
 Edit `.env` and add your MongoDB connection string:
 ```env
-MONGODB_URI=mongodb+srv://username:password@cluster.mongodb.net/convertfile
+MONGODB_URI=your_mongodb_connection_string_here
 PORT=3000
 NODE_ENV=development
 ```
+
+**Note**: Replace `your_mongodb_connection_string_here` with your actual MongoDB Atlas connection string.
 
 4. Start the development server:
 ```bash
