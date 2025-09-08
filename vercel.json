@@ -3,7 +3,10 @@
   "builds": [
     {
       "src": "server.js",
-      "use": "@vercel/node"
+      "use": "@vercel/node",
+      "config": {
+        "maxLambdaSize": "50mb"
+      }
     }
   ],
   "routes": [
@@ -16,11 +19,20 @@
       "dest": "/server.js"
     },
     {
+      "src": "/(.*\\.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2))",
+      "dest": "/frontend/$1"
+    },
+    {
       "src": "/(.*)",
       "dest": "/server.js"
     }
   ],
   "env": {
     "NODE_ENV": "production"
+  },
+  "functions": {
+    "server.js": {
+      "maxDuration": 60
+    }
   }
 }

@@ -17,24 +17,38 @@ async function connectToDatabase() {
         }
         
         client = new MongoClient(uri, {
-            serverSelectionTimeoutMS: 3000, // Reduced timeout to 3s
-            connectTimeoutMS: 3000,
-            socketTimeoutMS: 3000,
-            maxPoolSize: 1, // Limit connection pool for serverless
+            serverSelectionTimeoutMS: 5000, // Increased timeout to 5s
+            connectTimeoutMS: 10000,
+            socketTimeoutMS: 0,
+            maxPoolSize: 10, // Increased pool size
+            retryWrites: true,
+            w: 'majority'
         });
         
         // Set a timeout for the entire connection process
         const connectPromise = client.connect();
         const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error('Connection timeout')), 4000);
+            setTimeout(() => reject(new Error('Connection timeout after 8 seconds')), 8000);
         });
         
         await Promise.race([connectPromise, timeoutPromise]);
         db = client.db('convertfile');
+        
+        // Test the connection
+        await db.admin().ping();
         console.log('Connected to MongoDB successfully');
         return db;
     } catch (error) {
         console.error('MongoDB connection error (database features disabled):', error.message);
+        if (client) {
+            try {
+                await client.close();
+            } catch (closeError) {
+                console.error('Error closing MongoDB client:', closeError.message);
+            }
+        }
+        client = null;
+        db = null;
         return null;
     }
 }
@@ -107,6 +121,12 @@ function getTodayString() {
 // Track event
 async function trackEvent(eventType) {
     try {
+        const database = await connectToDatabase();
+        if (!database) {
+            console.log(`Event tracking skipped (no database): ${eventType}`);
+            return null;
+        }
+        
         const stats = await loadStats();
         const today = getTodayString();
         
@@ -151,11 +171,138 @@ async function trackEvent(eventType) {
         });
         
         await saveStats(stats);
+        console.log(`Event tracked: ${eventType}`);
         return stats;
     } catch (error) {
-        console.error('Error tracking event:', error);
+        console.error('Error tracking event:', error.message);
         return null;
     }
+}
+
+// Get user activity collection
+async function getUserActivityCollection() {
+    const database = await connectToDatabase();
+    if (!database) {
+        throw new Error('Database not available');
+    }
+    return database.collection('user_activity');
+}
+
+// Log detailed user activity
+async function logUserActivity(activityData) {
+    try {
+        const database = await connectToDatabase();
+        if (!database) {
+            console.log(`User activity logging skipped (no database): ${activityData.action}`);
+            return null;
+        }
+        
+        const collection = await getUserActivityCollection();
+        
+        const activityLog = {
+            ...activityData,
+            timestamp: new Date(),
+            date: getTodayString(),
+            _id: undefined // Let MongoDB generate the ID
+        };
+        
+        await collection.insertOne(activityLog);
+        console.log(`User activity logged: ${activityData.action} by ${activityData.ip}`);
+        return activityLog;
+    } catch (error) {
+        console.error('Error logging user activity:', error.message);
+        return null;
+    }
+}
+
+// Get user activity stats
+async function getUserActivityStats(days = 7) {
+    try {
+        const collection = await getUserActivityCollection();
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - days);
+        
+        const pipeline = [
+            {
+                $match: {
+                    timestamp: { $gte: startDate }
+                }
+            },
+            {
+                $group: {
+                    _id: {
+                        action: '$action',
+                        date: '$date'
+                    },
+                    count: { $sum: 1 },
+                    uniqueIPs: { $addToSet: '$ip' },
+                    totalFileSize: { $sum: { $ifNull: ['$fileSize', 0] } }
+                }
+            },
+            {
+                $group: {
+                    _id: '$_id.action',
+                    totalCount: { $sum: '$count' },
+                    dailyBreakdown: {
+                        $push: {
+                            date: '$_id.date',
+                            count: '$count',
+                            uniqueIPs: { $size: '$uniqueIPs' },
+                            totalFileSize: '$totalFileSize'
+                        }
+                    }
+                }
+            }
+        ];
+        
+        const stats = await collection.aggregate(pipeline).toArray();
+        return stats;
+    } catch (error) {
+        console.error('Error getting user activity stats:', error);
+        return [];
+    }
+}
+
+// Get recent user activities
+async function getRecentUserActivities(limit = 100) {
+    try {
+        const collection = await getUserActivityCollection();
+        const activities = await collection
+            .find({})
+            .sort({ timestamp: -1 })
+            .limit(limit)
+            .toArray();
+        
+        return activities;
+    } catch (error) {
+        console.error('Error getting recent user activities:', error);
+        return [];
+    }
+}
+
+// Helper function to extract client info from request
+function extractClientInfo(req) {
+    const ip = req.headers['x-forwarded-for'] || 
+               req.headers['x-real-ip'] || 
+               req.connection.remoteAddress || 
+               req.socket.remoteAddress ||
+               (req.connection.socket ? req.connection.socket.remoteAddress : null) ||
+               '127.0.0.1';
+
+    const userAgent = req.headers['user-agent'] || 'Unknown';
+    const referer = req.headers['referer'] || req.headers['referrer'] || null;
+    
+    return {
+        ip: Array.isArray(ip) ? ip[0] : ip.split(',')[0].trim(),
+        userAgent,
+        referer,
+        method: req.method,
+        url: req.url,
+        headers: {
+            'accept-language': req.headers['accept-language'],
+            'accept-encoding': req.headers['accept-encoding']
+        }
+    };
 }
 
 // Close database connection
@@ -172,5 +319,9 @@ module.exports = {
     loadStats,
     saveStats,
     trackEvent,
-    closeDatabase
+    closeDatabase,
+    logUserActivity,
+    getUserActivityStats,
+    getRecentUserActivities,
+    extractClientInfo
 };

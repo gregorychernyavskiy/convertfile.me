@@ -9,22 +9,38 @@ const { PDFDocument } = require("pdf-lib");
 require('dotenv').config();
 
 // Database functions with error handling
-let loadStats, trackEvent;
+let loadStats, trackEvent, logUserActivity, getUserActivityStats, getRecentUserActivities, extractClientInfo;
 try {
     const db = require('./database');
     loadStats = db.loadStats;
     trackEvent = db.trackEvent;
+    logUserActivity = db.logUserActivity;
+    getUserActivityStats = db.getUserActivityStats;
+    getRecentUserActivities = db.getRecentUserActivities;
+    extractClientInfo = db.extractClientInfo;
     console.log('Database module loaded successfully');
     
-    // Test connection asynchronously (non-blocking)
-    setTimeout(async () => {
-        try {
-            await db.connectToDatabase();
-            console.log('MongoDB connection test completed');
-        } catch (error) {
-            console.warn('MongoDB connection test failed (non-critical):', error.message);
+    // Test connection asynchronously (non-blocking) with retry logic
+    const testConnection = async (retries = 3) => {
+        for (let i = 0; i < retries; i++) {
+            try {
+                await db.connectToDatabase();
+                console.log('MongoDB connection test completed successfully');
+                return;
+            } catch (error) {
+                console.warn(`MongoDB connection test failed (attempt ${i + 1}/${retries}):`, error.message);
+                if (i === retries - 1) {
+                    console.warn('MongoDB connection test failed after all retries (non-critical)');
+                } else {
+                    // Wait before retry
+                    await new Promise(resolve => setTimeout(resolve, 1000 * (i + 1)));
+                }
+            }
         }
-    }, 1000);
+    };
+    
+    // Run connection test after a delay to avoid blocking startup
+    setTimeout(testConnection, 1000);
 } catch (error) {
     console.warn('Database module not available, using fallbacks:', error.message);
     loadStats = async () => ({
@@ -34,6 +50,10 @@ try {
         totalPdfToWord: 0
     });
     trackEvent = async () => {};
+    logUserActivity = async () => {};
+    getUserActivityStats = async () => [];
+    getRecentUserActivities = async () => [];
+    extractClientInfo = () => ({ ip: '127.0.0.1', userAgent: 'Unknown' });
 }
 
 // Initialize Express app
@@ -82,13 +102,46 @@ app.get('/api/stats', async (req, res) => {
     }
 });
 
-// Middleware to track page visits with MongoDB
+// API endpoint to get detailed user activity stats
+app.get('/api/activity-stats', async (req, res) => {
+    try {
+        const days = parseInt(req.query.days) || 7;
+        const activityStats = await getUserActivityStats(days);
+        res.json(activityStats);
+    } catch (error) {
+        console.error('Error fetching activity stats:', error);
+        res.status(500).json({ error: 'Failed to fetch activity stats' });
+    }
+});
+
+// API endpoint to get recent user activities
+app.get('/api/recent-activities', async (req, res) => {
+    try {
+        const limit = parseInt(req.query.limit) || 50;
+        const recentActivities = await getRecentUserActivities(limit);
+        res.json(recentActivities);
+    } catch (error) {
+        console.error('Error fetching recent activities:', error);
+        res.status(500).json({ error: 'Failed to fetch recent activities' });
+    }
+});
+
+// Middleware to track page visits with detailed logging
 app.use(async (req, res, next) => {
     // Only track visits to main pages, not assets
     if (req.path === '/' || req.path.endsWith('.html')) {
         try {
             await trackEvent('visit');
-            console.log(`Visit tracked: ${req.path}`);
+            
+            // Log detailed user activity
+            const clientInfo = extractClientInfo(req);
+            await logUserActivity({
+                action: 'page_visit',
+                page: req.path,
+                ...clientInfo
+            });
+            
+            console.log(`Visit tracked: ${req.path} from ${clientInfo.ip}`);
         } catch (error) {
             console.error('Error tracking visit (non-critical):', error);
             // Continue processing the request even if tracking fails
@@ -117,104 +170,366 @@ const supportedMimetypes = [
     "image/gif", "image/bmp", "image/webp", "image/avif", "image/svg+xml"
 ];
 
-// Simple file conversion endpoint
+// File conversion endpoint
 app.post("/convert", upload.array("files"), async (req, res) => {
+    let cleanupFiles = [];
+    
     try {
-        // Track conversion with MongoDB
-        try {
-            await trackEvent('conversion');
-        } catch (trackError) {
-            console.error('Error tracking conversion (non-critical):', trackError);
-        }
-        
+        const clientInfo = extractClientInfo(req);
         const format = req.body.output_format?.toLowerCase();
+        
         if (!format || !supportedFormats.includes(format)) {
+            // Log failed conversion attempt
+            await logUserActivity({
+                action: 'conversion_failed',
+                reason: 'invalid_format',
+                requestedFormat: format,
+                ...clientInfo
+            });
             return res.status(400).json({ error: `Invalid format. Supported: ${supportedFormats.join(", ")}` });
         }
         
         if (!req.files || req.files.length === 0) {
+            // Log failed conversion attempt
+            await logUserActivity({
+                action: 'conversion_failed',
+                reason: 'no_files',
+                ...clientInfo
+            });
             return res.status(400).json({ error: "No files uploaded." });
         }
 
-        // For now, just return success to test the endpoint
-        const results = req.files.map(file => ({
-            original: file.originalname,
-            size: file.size,
-            format: format
-        }));
-
-        // Clean up uploaded files
-        req.files.forEach(file => {
-            if (fs.existsSync(file.path)) {
-                fs.unlinkSync(file.path);
+        // Track conversion with MongoDB
+        try {
+            await trackEvent('conversion');
+            
+            // Log detailed conversion activity
+            const totalFileSize = req.files.reduce((sum, file) => sum + file.size, 0);
+            await logUserActivity({
+                action: 'file_conversion',
+                outputFormat: format,
+                fileCount: req.files.length,
+                fileSize: totalFileSize,
+                fileTypes: req.files.map(f => f.mimetype).filter((v, i, arr) => arr.indexOf(v) === i),
+                ...clientInfo
+            });
+        } catch (trackError) {
+            console.error('Error tracking conversion (non-critical):', trackError);
+        }
+        
+        // Process only the first file for single file conversion
+        const file = req.files[0];
+        cleanupFiles.push(file.path);
+        
+        const inputExt = path.extname(file.originalname).toLowerCase().slice(1);
+        const outputPath = path.join('/tmp', `converted_${Date.now()}.${format}`);
+        cleanupFiles.push(outputPath);
+        
+        console.log(`Converting ${file.originalname} (${inputExt}) to ${format}`);
+        
+        // Handle different conversion types
+        if (format === 'pdf') {
+            // Convert images to PDF
+            if (['jpg', 'jpeg', 'png', 'tiff', 'heic', 'gif', 'bmp', 'webp', 'avif'].includes(inputExt)) {
+                const pdfDoc = await PDFDocument.create();
+                
+                let imageBuffer;
+                if (inputExt === 'heic' || inputExt === 'heif') {
+                    const heicConvert = require('heic-convert');
+                    const heicBuffer = fs.readFileSync(file.path);
+                    imageBuffer = await heicConvert({
+                        buffer: heicBuffer,
+                        format: 'PNG'
+                    });
+                } else {
+                    imageBuffer = await sharp(file.path)
+                        .png()
+                        .toBuffer();
+                }
+                
+                const image = await pdfDoc.embedPng(imageBuffer);
+                const page = pdfDoc.addPage([image.width, image.height]);
+                page.drawImage(image, {
+                    x: 0,
+                    y: 0,
+                    width: image.width,
+                    height: image.height,
+                });
+                
+                const pdfBytes = await pdfDoc.save();
+                fs.writeFileSync(outputPath, pdfBytes);
+            } else {
+                throw new Error(`Cannot convert ${inputExt} to PDF`);
             }
+        } else if (['jpg', 'jpeg', 'png', 'tiff', 'gif', 'bmp', 'webp', 'avif'].includes(format)) {
+            // Convert to image formats using Sharp
+            let sharpInstance = sharp(file.path);
+            
+            // Handle HEIC files
+            if (inputExt === 'heic' || inputExt === 'heif') {
+                const heicConvert = require('heic-convert');
+                const heicBuffer = fs.readFileSync(file.path);
+                const convertedBuffer = await heicConvert({
+                    buffer: heicBuffer,
+                    format: 'PNG'
+                });
+                sharpInstance = sharp(convertedBuffer);
+            }
+            
+            // Apply format-specific conversion
+            switch (format) {
+                case 'jpg':
+                case 'jpeg':
+                    await sharpInstance.jpeg({ quality: 90 }).toFile(outputPath);
+                    break;
+                case 'png':
+                    await sharpInstance.png().toFile(outputPath);
+                    break;
+                case 'tiff':
+                    await sharpInstance.tiff().toFile(outputPath);
+                    break;
+                case 'webp':
+                    await sharpInstance.webp({ quality: 90 }).toFile(outputPath);
+                    break;
+                case 'avif':
+                    await sharpInstance.avif({ quality: 90 }).toFile(outputPath);
+                    break;
+                case 'gif':
+                    await sharpInstance.gif().toFile(outputPath);
+                    break;
+                case 'bmp':
+                    await sharpInstance.png().toFile(outputPath);
+                    break;
+                default:
+                    throw new Error(`Unsupported output format: ${format}`);
+            }
+        } else {
+            throw new Error(`Unsupported conversion: ${inputExt} to ${format}`);
+        }
+        
+        // Send the converted file
+        const originalName = path.parse(file.originalname).name;
+        const downloadName = `${originalName}.${format}`;
+        
+        res.setHeader('Content-Disposition', `attachment; filename="${downloadName}"`);
+        res.setHeader('Content-Type', format === 'pdf' ? 'application/pdf' : `image/${format}`);
+        
+        const fileStream = fs.createReadStream(outputPath);
+        fileStream.pipe(res);
+        
+        fileStream.on('end', () => {
+            // Clean up files after sending
+            cleanupFiles.forEach(filePath => {
+                try {
+                    if (fs.existsSync(filePath)) {
+                        fs.unlinkSync(filePath);
+                    }
+                } catch (cleanupError) {
+                    console.error('Cleanup error:', cleanupError);
+                }
+            });
         });
 
-        console.log(`Conversion tracked: ${req.files.length} files to ${format}`);
-
-        res.json({ 
-            message: "Conversion endpoint working!",
-            files: results,
-            format: format
-        });
+        console.log(`Conversion completed: ${file.originalname} to ${format} from ${clientInfo.ip}`);
 
     } catch (error) {
         console.error("Conversion error:", error);
+        
+        // Clean up on error
+        cleanupFiles.forEach(filePath => {
+            try {
+                if (fs.existsSync(filePath)) {
+                    fs.unlinkSync(filePath);
+                }
+            } catch (cleanupError) {
+                console.error('Cleanup error:', cleanupError);
+            }
+        });
+        
+        // Log conversion error
+        try {
+            const clientInfo = extractClientInfo(req);
+            await logUserActivity({
+                action: 'conversion_error',
+                error: error.message,
+                ...clientInfo
+            });
+        } catch (logError) {
+            console.error('Error logging conversion error:', logError);
+        }
+        
         res.status(500).json({ error: error.message || "Conversion failed" });
     }
 });
 
-// Simple combine endpoint
+// File combine endpoint
 app.post("/combine", upload.array("files"), async (req, res) => {
+    let cleanupFiles = [];
+    
     try {
+        const clientInfo = extractClientInfo(req);
+        
+        if (!req.files || req.files.length === 0) {
+            // Log failed combine attempt
+            await logUserActivity({
+                action: 'combine_failed',
+                reason: 'no_files',
+                ...clientInfo
+            });
+            return res.status(400).json({ error: "No files uploaded." });
+        }
+
         // Track combine with MongoDB
         try {
             await trackEvent('combine');
+            
+            // Log detailed combine activity
+            const totalFileSize = req.files.reduce((sum, file) => sum + file.size, 0);
+            await logUserActivity({
+                action: 'file_combine',
+                fileCount: req.files.length,
+                fileSize: totalFileSize,
+                fileTypes: req.files.map(f => f.mimetype).filter((v, i, arr) => arr.indexOf(v) === i),
+                ...clientInfo
+            });
         } catch (trackError) {
             console.error('Error tracking combine (non-critical):', trackError);
         }
         
-        if (!req.files || req.files.length === 0) {
-            return res.status(400).json({ error: "No files uploaded." });
-        }
-
-        // For now, just return success to test the endpoint
-        const results = req.files.map(file => ({
-            original: file.originalname,
-            size: file.size
-        }));
-
-        // Clean up uploaded files
-        req.files.forEach(file => {
-            if (fs.existsSync(file.path)) {
-                fs.unlinkSync(file.path);
+        // Add uploaded files to cleanup list
+        cleanupFiles.push(...req.files.map(f => f.path));
+        
+        // Create a new PDF document
+        const pdfDoc = await PDFDocument.create();
+        
+        // Process each uploaded file
+        for (let i = 0; i < req.files.length; i++) {
+            const file = req.files[i];
+            const fileExt = path.extname(file.originalname).toLowerCase();
+            
+            console.log(`Processing file ${i + 1}/${req.files.length}: ${file.originalname}`);
+            
+            try {
+                if (fileExt === '.pdf') {
+                    // If it's a PDF, merge it
+                    const existingPdfBytes = fs.readFileSync(file.path);
+                    const existingPdf = await PDFDocument.load(existingPdfBytes);
+                    const pages = await pdfDoc.copyPages(existingPdf, existingPdf.getPageIndices());
+                    pages.forEach((page) => pdfDoc.addPage(page));
+                } else if (['.jpg', '.jpeg', '.png', '.tiff', '.gif', '.bmp', '.webp', '.avif'].includes(fileExt)) {
+                    // If it's an image, convert and add it
+                    let imageBuffer;
+                    
+                    if (fileExt === '.heic' || fileExt === '.heif') {
+                        const heicConvert = require('heic-convert');
+                        const heicFileBuffer = fs.readFileSync(file.path);
+                        imageBuffer = await heicConvert({
+                            buffer: heicFileBuffer,
+                            format: 'PNG'
+                        });
+                    } else {
+                        imageBuffer = await sharp(file.path)
+                            .png()
+                            .toBuffer();
+                    }
+                    
+                    const image = await pdfDoc.embedPng(imageBuffer);
+                    const page = pdfDoc.addPage([image.width, image.height]);
+                    page.drawImage(image, {
+                        x: 0,
+                        y: 0,
+                        width: image.width,
+                        height: image.height,
+                    });
+                } else {
+                    console.warn(`Skipping unsupported file type: ${file.originalname}`);
+                }
+            } catch (fileError) {
+                console.error(`Error processing file ${file.originalname}:`, fileError);
+                // Continue with other files
             }
+        }
+        
+        // Check if we have any pages
+        if (pdfDoc.getPageCount() === 0) {
+            throw new Error('No valid files to combine. Please upload PDF or image files.');
+        }
+        
+        // Save the combined PDF
+        const pdfBytes = await pdfDoc.save();
+        const outputPath = path.join('/tmp', `combined_${Date.now()}.pdf`);
+        cleanupFiles.push(outputPath);
+        fs.writeFileSync(outputPath, pdfBytes);
+        
+        // Send the combined PDF
+        const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+        const downloadName = `combined_${timestamp}.pdf`;
+        
+        res.setHeader('Content-Disposition', `attachment; filename="${downloadName}"`);
+        res.setHeader('Content-Type', 'application/pdf');
+        
+        const fileStream = fs.createReadStream(outputPath);
+        fileStream.pipe(res);
+        
+        fileStream.on('end', () => {
+            // Clean up files after sending
+            cleanupFiles.forEach(filePath => {
+                try {
+                    if (fs.existsSync(filePath)) {
+                        fs.unlinkSync(filePath);
+                    }
+                } catch (cleanupError) {
+                    console.error('Cleanup error:', cleanupError);
+                }
+            });
         });
 
-        console.log(`Combine tracked: ${req.files.length} files`);
-
-        res.json({ 
-            message: "Combine endpoint working!",
-            files: results
-        });
+        console.log(`Combine completed: ${req.files.length} files combined to PDF from ${clientInfo.ip}`);
 
     } catch (error) {
         console.error("Combine error:", error);
+        
+        // Clean up on error
+        cleanupFiles.forEach(filePath => {
+            try {
+                if (fs.existsSync(filePath)) {
+                    fs.unlinkSync(filePath);
+                }
+            } catch (cleanupError) {
+                console.error('Cleanup error:', cleanupError);
+            }
+        });
+        
+        // Log combine error
+        try {
+            const clientInfo = extractClientInfo(req);
+            await logUserActivity({
+                action: 'combine_error',
+                error: error.message,
+                ...clientInfo
+            });
+        } catch (logError) {
+            console.error('Error logging combine error:', logError);
+        }
+        
         res.status(500).json({ error: error.message || "Combine failed" });
     }
 });
 
 // PDF to Word endpoint
 app.post("/pdf-to-word", upload.array("files"), async (req, res) => {
+    let cleanupFiles = [];
+    
     try {
-        // Track PDF to Word conversion with MongoDB
-        try {
-            await trackEvent('pdfToWord');
-        } catch (trackError) {
-            console.error('Error tracking PDF to Word (non-critical):', trackError);
-        }
+        const clientInfo = extractClientInfo(req);
         
         if (!req.files || req.files.length === 0) {
+            // Log failed PDF to Word attempt
+            await logUserActivity({
+                action: 'pdf_to_word_failed',
+                reason: 'no_files',
+                ...clientInfo
+            });
             return res.status(400).json({ error: "No files uploaded." });
         }
 
@@ -225,32 +540,201 @@ app.post("/pdf-to-word", upload.array("files"), async (req, res) => {
         );
 
         if (pdfFiles.length === 0) {
+            // Log failed PDF to Word attempt
+            await logUserActivity({
+                action: 'pdf_to_word_failed',
+                reason: 'no_pdf_files',
+                uploadedFileTypes: req.files.map(f => f.mimetype),
+                ...clientInfo
+            });
             return res.status(400).json({ error: "No PDF files found. Please upload PDF files only." });
         }
 
-        // For now, just return success to test the endpoint
-        const results = pdfFiles.map(file => ({
-            original: file.originalname,
-            size: file.size,
-            outputFormat: 'docx'
-        }));
-
-        // Clean up uploaded files
-        req.files.forEach(file => {
-            if (fs.existsSync(file.path)) {
-                fs.unlinkSync(file.path);
+        // Track PDF to Word conversion with MongoDB
+        try {
+            await trackEvent('pdfToWord');
+            
+            // Log detailed PDF to Word activity
+            const totalFileSize = pdfFiles.reduce((sum, file) => sum + file.size, 0);
+            await logUserActivity({
+                action: 'pdf_to_word_conversion',
+                fileCount: pdfFiles.length,
+                fileSize: totalFileSize,
+                ...clientInfo
+            });
+        } catch (trackError) {
+            console.error('Error tracking PDF to Word (non-critical):', trackError);
+        }
+        
+        // Add all files to cleanup list
+        cleanupFiles.push(...req.files.map(f => f.path));
+        
+        if (pdfFiles.length === 1) {
+            // Single file conversion
+            const file = pdfFiles[0];
+            const outputPath = path.join('/tmp', `converted_${Date.now()}.docx`);
+            cleanupFiles.push(outputPath);
+            
+            try {
+                // Use pdf-parse to extract text content
+                const pdfParse = require('pdf-parse');
+                const pdfBuffer = fs.readFileSync(file.path);
+                const pdfData = await pdfParse(pdfBuffer);
+                
+                // Create Word document using docx library
+                const { Document, Packer, Paragraph, TextRun } = require('docx');
+                
+                // Split text into paragraphs
+                const paragraphs = pdfData.text.split('\n\n').filter(p => p.trim().length > 0);
+                
+                const doc = new Document({
+                    sections: [{
+                        properties: {},
+                        children: paragraphs.map(text => 
+                            new Paragraph({
+                                children: [new TextRun(text.trim())]
+                            })
+                        )
+                    }]
+                });
+                
+                const buffer = await Packer.toBuffer(doc);
+                fs.writeFileSync(outputPath, buffer);
+                
+                // Send the converted file
+                const originalName = path.parse(file.originalname).name;
+                const downloadName = `${originalName}.docx`;
+                
+                res.setHeader('Content-Disposition', `attachment; filename="${downloadName}"`);
+                res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+                
+                const fileStream = fs.createReadStream(outputPath);
+                fileStream.pipe(res);
+                
+                fileStream.on('end', () => {
+                    // Clean up files after sending
+                    cleanupFiles.forEach(filePath => {
+                        try {
+                            if (fs.existsSync(filePath)) {
+                                fs.unlinkSync(filePath);
+                            }
+                        } catch (cleanupError) {
+                            console.error('Cleanup error:', cleanupError);
+                        }
+                    });
+                });
+                
+            } catch (conversionError) {
+                throw new Error(`PDF to Word conversion failed: ${conversionError.message}`);
             }
-        });
+            
+        } else {
+            // Multiple files - create a ZIP
+            const archiver = require('archiver');
+            const zipPath = path.join('/tmp', `converted_${Date.now()}.zip`);
+            cleanupFiles.push(zipPath);
+            
+            const output = fs.createWriteStream(zipPath);
+            const archive = archiver('zip', { zlib: { level: 9 } });
+            
+            archive.pipe(output);
+            
+            // Process each PDF file
+            for (let i = 0; i < pdfFiles.length; i++) {
+                const file = pdfFiles[i];
+                
+                try {
+                    // Use pdf-parse to extract text content
+                    const pdfParse = require('pdf-parse');
+                    const pdfBuffer = fs.readFileSync(file.path);
+                    const pdfData = await pdfParse(pdfBuffer);
+                    
+                    // Create Word document using docx library
+                    const { Document, Packer, Paragraph, TextRun } = require('docx');
+                    
+                    // Split text into paragraphs
+                    const paragraphs = pdfData.text.split('\n\n').filter(p => p.trim().length > 0);
+                    
+                    const doc = new Document({
+                        sections: [{
+                            properties: {},
+                            children: paragraphs.map(text => 
+                                new Paragraph({
+                                    children: [new TextRun(text.trim())]
+                                })
+                            )
+                        }]
+                    });
+                    
+                    const buffer = await Packer.toBuffer(doc);
+                    const originalName = path.parse(file.originalname).name;
+                    archive.append(buffer, { name: `${originalName}.docx` });
+                    
+                } catch (fileError) {
+                    console.error(`Error converting ${file.originalname}:`, fileError);
+                    // Add error file to ZIP
+                    archive.append(`Error converting ${file.originalname}: ${fileError.message}`, { 
+                        name: `ERROR_${file.originalname}.txt` 
+                    });
+                }
+            }
+            
+            archive.finalize();
+            
+            output.on('close', () => {
+                // Send the ZIP file
+                const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+                const downloadName = `converted_pdfs_${timestamp}.zip`;
+                
+                res.setHeader('Content-Disposition', `attachment; filename="${downloadName}"`);
+                res.setHeader('Content-Type', 'application/zip');
+                
+                const fileStream = fs.createReadStream(zipPath);
+                fileStream.pipe(res);
+                
+                fileStream.on('end', () => {
+                    // Clean up files after sending
+                    cleanupFiles.forEach(filePath => {
+                        try {
+                            if (fs.existsSync(filePath)) {
+                                fs.unlinkSync(filePath);
+                            }
+                        } catch (cleanupError) {
+                            console.error('Cleanup error:', cleanupError);
+                        }
+                    });
+                });
+            });
+        }
 
-        console.log(`PDF to Word tracked: ${pdfFiles.length} files`);
-
-        res.json({ 
-            message: "PDF to Word endpoint working!",
-            files: results
-        });
+        console.log(`PDF to Word completed: ${pdfFiles.length} files from ${clientInfo.ip}`);
 
     } catch (error) {
         console.error("PDF to Word error:", error);
+        
+        // Clean up on error
+        cleanupFiles.forEach(filePath => {
+            try {
+                if (fs.existsSync(filePath)) {
+                    fs.unlinkSync(filePath);
+                }
+            } catch (cleanupError) {
+                console.error('Cleanup error:', cleanupError);
+            }
+        });
+        
+        // Log PDF to Word error
+        try {
+            const clientInfo = extractClientInfo(req);
+            await logUserActivity({
+                action: 'pdf_to_word_error',
+                error: error.message,
+                ...clientInfo
+            });
+        } catch (logError) {
+            console.error('Error logging PDF to Word error:', logError);
+        }
+        
         res.status(500).json({ error: error.message || "PDF to Word conversion failed" });
     }
 });
@@ -258,6 +742,11 @@ app.post("/pdf-to-word", upload.array("files"), async (req, res) => {
 // Main HTML for root
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'frontend', 'index.html'));
+});
+
+// Admin dashboard
+app.get('/admin', (req, res) => {
+    res.sendFile(path.join(__dirname, 'frontend', 'admin.html'));
 });
 
 // 404 handler
@@ -280,8 +769,37 @@ app.use((error, req, res, next) => {
 // Start server in development
 if (process.env.NODE_ENV !== 'production') {
     const PORT = process.env.PORT || 3000;
-    app.listen(PORT, () => {
+    const server = app.listen(PORT, () => {
         console.log(`Serverless-compatible server running on port ${PORT}`);
+    });
+
+    // Graceful shutdown
+    process.on('SIGTERM', async () => {
+        console.log('SIGTERM received, shutting down gracefully');
+        server.close(async () => {
+            try {
+                const db = require('./database');
+                await db.closeDatabase();
+                console.log('Database connections closed');
+            } catch (error) {
+                console.error('Error closing database:', error);
+            }
+            process.exit(0);
+        });
+    });
+
+    process.on('SIGINT', async () => {
+        console.log('SIGINT received, shutting down gracefully');
+        server.close(async () => {
+            try {
+                const db = require('./database');
+                await db.closeDatabase();
+                console.log('Database connections closed');
+            } catch (error) {
+                console.error('Error closing database:', error);
+            }
+            process.exit(0);
+        });
     });
 }
 
