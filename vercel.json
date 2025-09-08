@@ -15,19 +15,15 @@
       "dest": "/server.js"
     },
     {
-      "src": "/(convert|combine|pdf-to-word)",
+      "src": "/(convert|combine|pdf-to-word|admin)",
       "dest": "/server.js"
     },
     {
-      "src": "/style.css",
-      "dest": "/frontend/style.css"
+      "src": "/(.*\\.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2))",
+      "dest": "/frontend/$1"
     },
     {
-      "src": "/script.js",
-      "dest": "/frontend/script.js"
-    },
-    {
-      "src": "/(.*\\.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2|html))",
+      "src": "/(.*\\.html)",
       "dest": "/frontend/$1"
     },
     {

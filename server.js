@@ -150,9 +150,6 @@ app.use(async (req, res, next) => {
     next();
 });
 
-// Serve static files
-app.use(express.static(path.join(__dirname, "frontend")));
-
 // Health check
 app.get('/api/health', (req, res) => {
     res.json({ 
@@ -739,9 +736,25 @@ app.post("/pdf-to-word", upload.array("files"), async (req, res) => {
     }
 });
 
+// Serve static files (CSS, JS, images)
+app.use(express.static(path.join(__dirname, "frontend")));
+
 // Main HTML for root
 app.get('/', (req, res) => {
     res.sendFile(path.join(__dirname, 'frontend', 'index.html'));
+});
+
+// HTML page routes
+app.get('/convert', (req, res) => {
+    res.sendFile(path.join(__dirname, 'frontend', 'convert.html'));
+});
+
+app.get('/combine', (req, res) => {
+    res.sendFile(path.join(__dirname, 'frontend', 'combine.html'));
+});
+
+app.get('/pdf-to-word', (req, res) => {
+    res.sendFile(path.join(__dirname, 'frontend', 'pdf-to-word.html'));
 });
 
 // Admin dashboard

@@ -3,9 +3,10 @@ document.addEventListener("DOMContentLoaded", function () {
     
     // Determine the base API URL
     const getApiBaseUrl = () => {
-        // If we're on localhost, use localhost:3000
+        // If we're on localhost, use the current port or default to 3000
         if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-            return 'http://localhost:3000';
+            const port = window.location.port || '3000';
+            return `http://localhost:${port}`;
         }
         // Otherwise, use the current origin (for serverless deployment)
         return window.location.origin;
@@ -36,9 +37,14 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function loadStats() {
+        console.log('Loading stats from:', `${API_BASE_URL}/api/stats`);
         fetch(`${API_BASE_URL}/api/stats`)
-            .then(response => response.json())
+            .then(response => {
+                console.log('Stats response status:', response.status);
+                return response.json();
+            })
             .then(stats => {
+                console.log('Stats data received:', stats);
                 updateStatsDisplay(stats);
             })
             .catch(error => {
@@ -54,6 +60,7 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function updateStatsDisplay(stats) {
+        console.log('Updating stats display with:', stats);
         const elements = {
             totalVisits: document.getElementById('totalVisits'),
             totalConversions: document.getElementById('totalConversions'),
@@ -61,10 +68,15 @@ document.addEventListener("DOMContentLoaded", function () {
             totalPdfToWord: document.getElementById('totalPdfToWord')
         };
 
+        console.log('Found elements:', elements);
+
         // Animate numbers counting up
         Object.keys(elements).forEach(key => {
             if (elements[key]) {
+                console.log(`Animating ${key} from 0 to ${stats[key] || 0}`);
                 animateNumber(elements[key], 0, stats[key] || 0, 1500);
+            } else {
+                console.warn(`Element not found: ${key}`);
             }
         });
     }
