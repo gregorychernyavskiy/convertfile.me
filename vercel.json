@@ -7,6 +7,10 @@
       "config": {
         "maxLambdaSize": "50mb"
       }
+    },
+    {
+      "src": "frontend/**",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
@@ -17,6 +21,10 @@
     {
       "src": "/(convert|combine|pdf-to-word|admin)",
       "dest": "/server.js"
+    },
+    {
+      "src": "/(style\\.css|script\\.js)",
+      "dest": "/frontend/$1"
     },
     {
       "src": "/(.*\\.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2))",
