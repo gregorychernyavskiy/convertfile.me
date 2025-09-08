@@ -17,15 +17,15 @@
     },
     {
       "src": "/style.css",
-      "dest": "/frontend/style.css"
+      "dest": "/style.css"
     },
     {
       "src": "/script.js", 
-      "dest": "/frontend/script.js"
+      "dest": "/script.js"
     },
     {
       "src": "/(.*\\.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2))",
-      "dest": "/frontend/$1"
+      "dest": "/$1"
     },
     {
       "src": "/(.*\\.html)",

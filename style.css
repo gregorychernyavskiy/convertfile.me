@@ -1,0 +1,688 @@
+/* Import Google Font - Poppins (Bold & Rounded) */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
+
+/* Global Styles */
+body {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    min-height: 100vh;
+    background: linear-gradient(to bottom right, #ffffff, #f8f9fa);
+    font-family: 'Poppins', sans-serif;
+    font-weight: 600;
+    margin: 0;
+    text-align: center;
+    color: #1E293B;
+    padding-top: 80px; /* Push content below navbar */
+}
+
+/* Stick Navbar to the Top */
+.nav-bar {
+    width: 100%;
+    position: fixed;
+    top: 0;
+    left: 0;
+    padding: 15px 30px;
+    background: #ffffff;
+    box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
+    z-index: 1000;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+/* Navbar Logo */
+.nav-bar .logo a {
+    font-size: 24px;
+    font-weight: 700;
+    color: #38BDF8;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+/* Navigation Links */
+.nav-links {
+    display: flex;
+    gap: 20px; /* Even spacing */
+    align-items: center;
+    margin-left: auto; /* Push links to the right */
+    margin-right: 50px; /* Ensure proper spacing from the right edge */
+}
+
+/* Individual Buttons */
+.nav-links a {
+    text-decoration: none;
+    color: #1E293B;
+    font-weight: 600;
+    padding: 10px 16px; /* Ensures consistent size */
+    border-radius: 8px;
+    transition: background 0.3s, color 0.3s;
+    border: 2px solid transparent;
+    font-size: 16px;
+    white-space: nowrap; /* Prevents text wrapping */
+    display: inline-block;
+}
+
+/* Fix Hover Effect */
+.nav-links a:hover {
+    background: #38BDF8 !important; /* Ensures hover works properly */
+    border-color: #38BDF8 !important;
+    color: white !important;
+}
+
+
+/* Fix Title Overlapping */
+h1 {
+    font-size: 36px;
+    font-weight: 700;
+    color: #38BDF8;
+    text-transform: uppercase; /* Adds emphasis to the title */
+    letter-spacing: 2px; /* Adds some space between letters */
+    margin-bottom: 20px; /* Adds space below the title */
+    text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.1); /* Subtle shadow for depth */
+}
+
+/* Styling for the Simple Description Text */
+.container .simple-description {
+    font-size: 20px;
+    font-weight: 500;
+    color: #38BDF8; /* Lighter blue for contrast */
+    margin-top: 5px;
+    margin-bottom: 20px;
+    line-height: 1.6; /* Improves readability */
+    text-align: center;
+    letter-spacing: 1px; /* Slight space between letters for a cleaner look */
+    font-style: italic; /* Adds a subtle emphasis */
+}
+
+/* Optional: Add a subtle underline or border to make it stand out more */
+.container .simple-description::after {
+    content: "";
+    display: block;
+    width: 60px; /* Adjust based on preference */
+    height: 3px;
+    background-color: #38BDF8; /* Same blue color */
+    margin: 15px auto 0;
+}
+
+/* Convert Files Section */
+.container {
+    margin-top: 20px;
+    background: #ffffff;
+    padding: 60px 50px;
+    border-radius: 16px;
+    box-shadow: 0px 6px 16px rgba(0, 0, 0, 0.1);
+    width: 800px;
+    text-align: center;
+    color: #1E293B;
+    border: 1px solid #e0e0e0;
+}
+
+/* Welcome Section Styling */
+.welcome-section {
+    margin-bottom: 40px;
+}
+
+.welcome-title {
+    font-size: 38px;
+    font-weight: 700;
+    color: #1E293B;
+    margin-bottom: 15px;
+    font-family: 'Poppins', sans-serif;
+    text-transform: none;
+    letter-spacing: normal;
+    text-shadow: none;
+}
+
+.welcome-title .brand-name {
+    color: #38BDF8;
+}
+
+.welcome-subtitle {
+    font-size: 20px;
+    font-weight: 500;
+    color: #64748B;
+    margin: 0;
+    font-family: 'Poppins', sans-serif;
+}
+
+/* Drop Area */
+.drop-area {
+    border: 3px dashed #38BDF8;
+    padding: 30px;
+    border-radius: 14px;
+    cursor: pointer;
+    background: #F8FAFC;
+    color: #1E293B;
+    font-weight: 700;
+    transition: background 0.3s, border-color 0.3s;
+    font-size: 18px;
+}
+
+.drop-area:hover {
+    background: #E0F2FE;
+    border-color: #2563eb;
+}
+
+/* File List */
+.file-list {
+    margin-top: 15px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+}
+
+/* File Item */
+.file-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: 100%;
+    font-weight: 600;
+    padding: 5px 10px;
+    background: none;
+    border-radius: 0;
+    box-shadow: none;
+}
+
+/* Center the Remove button */
+.file-item button {
+    padding: 6px 12px;
+    border: none;
+    background-color: #FF4D4D;
+    color: white;
+    font-weight: bold;
+    border-radius: 5px;
+    cursor: pointer;
+    text-align: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 80px;
+}
+
+.file-item button:hover {
+    background-color: #D43F3F;
+}
+
+/* Convert Options */
+.convert-options {
+    display: none;
+    margin-top: 20px;
+    font-size: 16px;
+    color: #1E293B;
+    text-align: center;
+}
+
+/* Keep "Convert to" Black */
+.convert-options label {
+    font-size: 18px;
+    font-weight: bold;
+    color: black;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+/* Make Dropdown Smaller with Dashed Blue Border */
+.convert-options select {
+    padding: 6px 12px;
+    font-size: 16px;
+    font-weight: bold;
+    color: black;
+    border: 2px dashed #38BDF8; /* Correct Blue */
+    border-radius: 6px;
+    background: white;
+    cursor: pointer;
+    width: auto;
+    min-width: 120px;
+    outline: none;
+    transition: 0.3s;
+}
+
+.convert-options select:hover {
+    border-color: #2563EB;
+    background: #E0F2FE;
+}
+
+/* Button & Select */
+select, button {
+    margin-top: 10px;
+    padding: 14px 22px;
+    font-size: 18px;
+    border-radius: 12px;
+    border: none;
+    font-weight: 700;
+}
+
+button {
+    background-color: #38BDF8;
+    color: white;
+    cursor: pointer;
+    transition: background 0.3s, transform 0.2s;
+}
+
+button:hover {
+    background-color: #2563eb;
+    transform: scale(1.05);
+}
+
+/* Download Link */
+#downloadLink {
+    display: none;
+    margin-top: 20px;
+    font-size: 18px;
+    color: #38BDF8;
+    text-decoration: none;
+    font-weight: 700;
+}
+
+#downloadLink:hover {
+    color: #2563eb;
+}
+
+/* Home page buttons styling */
+#selectionButtons a button {
+    padding: 20px 40px;
+    font-size: 18px;
+    background-color: #38BDF8;
+    color: white;
+    border: none;
+    border-radius: 12px;
+    cursor: pointer;
+    margin: 0 15px;
+    box-shadow: 0 4px 12px rgba(56, 189, 248, 0.3);
+    transition: all 0.2s ease;
+    min-width: 160px;
+    height: 70px;
+    font-family: 'Poppins', sans-serif;
+    font-weight: 600;
+}
+
+#selectionButtons a button:hover {
+    background-color: #2563eb;
+    transform: translateY(-2px);
+    box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
+}
+
+#selectionButtons a {
+    text-decoration: none;
+}
+
+.selection-buttons {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 30px;
+    margin-top: 20px;
+    flex-wrap: wrap;
+}
+
+/* Feature Cards Section - 2x2 Grid Layout */
+.features-section {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 30px;
+    margin-top: 60px;
+    margin-bottom: 80px;
+    padding: 0 20px;
+    max-width: 900px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.feature-card {
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 30px 25px;
+    box-shadow: 0px 8px 24px rgba(0, 0, 0, 0.08);
+    border: 1px solid #e0e0e0;
+    text-align: center;
+    min-height: 280px;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-start;
+}
+
+.feature-icon {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 20px auto;
+    background-size: contain;
+    background-repeat: no-repeat;
+    background-position: center;
+}
+
+.feature-icon.convert {
+    background-image: url('data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%2338BDF8"><path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H10V20H6V4H13V9H18V12H20V8L14,2M20.31,14.38C21.39,14.78 22,15.76 22,16.69V19.78A2.22,2.22 0 0,1 19.78,22H17.22A2.22,2.22 0 0,1 15,19.78V16.69C15,15.76 15.61,14.78 16.69,14.38L17.11,14.22L17.27,13.8C17.65,12.96 18.5,12.44 19.5,12.44C20.5,12.44 21.35,12.96 21.73,13.8L21.89,14.22L22.31,14.38M19.5,15.5A1,1 0 0,0 18.5,16.5A1,1 0 0,0 19.5,17.5A1,1 0 0,0 20.5,16.5A1,1 0 0,0 19.5,15.5Z"/></svg>');
+}
+
+.feature-icon.anywhere {
+    background-image: url('data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%2338BDF8"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>');
+}
+
+.feature-icon.privacy {
+    background-image: url('data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%2338BDF8"><path d="M12 1L3 5v6c0 5.55 3.84 10.74 9 12 5.16-1.26 9-6.45 9-12V5l-9-4zM12 7c1.1 0 2 .9 2 2v2h1v5H9v-5h1V9c0-1.1.9-2 2-2zm0 1c-.55 0-1 .45-1 1v2h2V9c0-.55-.45-1-1-1z"/></svg>');
+}
+
+.feature-icon.secure {
+    background-image: url('data:image/svg+xml;charset=UTF-8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%2338BDF8"><path d="M14,2H6A2,2 0 0,0 4,4V20A2,2 0 0,0 6,22H18A2,2 0 0,0 20,20V8L14,2M18,20H6V4H13V9H18V20Z"/></svg>');
+}
+
+.feature-card h3 {
+    font-size: 24px;
+    font-weight: 700;
+    color: #1E293B;
+    margin-bottom: 15px;
+    font-family: 'Poppins', sans-serif;
+}
+
+.feature-card p {
+    font-size: 16px;
+    color: #64748B;
+    line-height: 1.6;
+    margin: 0;
+    font-weight: 400;
+    font-family: 'Poppins', sans-serif;
+}
+
+/* Responsive Design for Feature Cards */
+@media (max-width: 768px) {
+    .features-section {
+        grid-template-columns: 1fr;
+        gap: 20px;
+        margin-top: 40px;
+    }
+    
+    .feature-card {
+        width: 100%;
+        min-height: auto;
+        padding: 25px 20px;
+    }
+    
+    .feature-icon {
+        width: 48px;
+        height: 48px;
+        margin-bottom: 15px;
+    }
+    
+    .feature-card h3 {
+        font-size: 20px;
+        margin-bottom: 12px;
+    }
+    
+    .feature-card p {
+        font-size: 14px;
+    }
+}
+
+/* Responsive Design for Mobile */
+@media (max-width: 768px) {
+    /* Make Navbar Adjust for Smaller Screens */
+    .nav-bar {
+        flex-direction: column;
+        padding: 10px 20px;
+    }
+
+    .nav-links {
+        flex-direction: column; /* Stack links on smaller screens */
+        gap: 10px;
+        margin-top: 10px;
+    }
+
+    .nav-links a {
+        width: 100%;
+        text-align: center;
+        padding: 10px;
+    }
+
+    /* Adjust Container for Mobile */
+    .container {
+        width: 90%;
+        padding: 30px 20px;
+    }
+    
+    .welcome-title {
+        font-size: 24px;
+        margin-bottom: 8px;
+    }
+    
+    .welcome-subtitle {
+        font-size: 16px;
+    }
+
+    /* Adjust Drop Area */
+    .drop-area {
+        padding: 20px;
+    }
+
+    /* Make Buttons and Dropdown Fit on Mobile */
+    .convert-options select,
+    .convert-options button {
+        width: 100%;
+    }
+}
+
+/* Stats Section */
+.stats-section {
+    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
+    border-top: 1px solid #b3e5fc;
+    border-bottom: 1px solid #b3e5fc;
+    padding: 40px 0;
+    margin-top: 60px;
+    width: 100%;
+}
+
+.stats-container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 0 30px;
+    text-align: center;
+}
+
+.stats-container h3 {
+    font-size: 28px;
+    font-weight: 700;
+    color: #1e293b;
+    margin-bottom: 30px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 30px;
+    margin-top: 20px;
+}
+
+.stat-item {
+    background: white;
+    padding: 25px 20px;
+    border-radius: 16px;
+    box-shadow: 0 8px 24px rgba(56, 189, 248, 0.15);
+    border: 2px solid rgba(56, 189, 248, 0.1);
+    text-align: center;
+}
+
+.stat-number {
+    display: block;
+    font-size: 36px;
+    font-weight: 700;
+    color: #38BDF8;
+    margin-bottom: 8px;
+    line-height: 1;
+}
+
+.stat-label {
+    display: block;
+    font-size: 14px;
+    font-weight: 600;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+@media (max-width: 768px) {
+    .stats-container {
+        padding: 0 20px;
+    }
+    
+    .stats-container h3 {
+        font-size: 24px;
+    }
+    
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 20px;
+    }
+    
+    .stat-item {
+        padding: 20px 15px;
+    }
+    
+    .stat-number {
+        font-size: 28px;
+    }
+    
+    .stat-label {
+        font-size: 12px;
+    }
+}
+
+/* Footer Section */
+.footer {
+    background: #f8f9fa;
+    border-top: 1px solid #e0e0e0;
+    padding: 35px 0 30px;
+    margin-top: 60px;
+    width: 100%;
+}
+
+.footer-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 40px;
+}
+
+.footer-company,
+.footer-creator {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    flex: 1;
+    min-width: 250px;
+}
+
+.footer-contact,
+.creator-title {
+    font-size: 16px;
+    font-weight: 600;
+    color: #1E293B;
+    margin: 0 0 15px 0;
+    font-family: 'Poppins', sans-serif;
+}
+
+.footer-contact .footer-email {
+    color: #38BDF8;
+    font-weight: 600;
+}
+
+.creator-title .creator-name {
+    color: #38BDF8;
+    font-weight: 600;
+}
+
+.creator-title {
+    color: #1E293B;
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0 0 15px 0;
+    font-family: 'Poppins', sans-serif;
+}
+
+.footer-email {
+    font-size: 16px;
+    font-weight: 600;
+    color: #38BDF8;
+    margin: 0 0 15px 0;
+    font-family: 'Poppins', sans-serif;
+}
+
+.footer-company-social,
+.footer-creator-social {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    justify-content: center;
+}
+
+.social-icon {
+    width: 36px;
+    height: 36px;
+    background: #38BDF8;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    box-shadow: 0 3px 10px rgba(56, 189, 248, 0.15);
+}
+
+.social-icon:hover {
+    background: #2563eb;
+    transform: translateY(-1px);
+    box-shadow: 0 5px 15px rgba(56, 189, 248, 0.3);
+}
+
+.social-icon svg {
+    width: 18px;
+    height: 18px;
+}
+
+/* Responsive Footer */
+@media (max-width: 768px) {
+    .footer {
+        padding: 25px 0 20px;
+        margin-top: 40px;
+    }
+    
+    .footer-content {
+        flex-direction: column;
+        text-align: center;
+        gap: 30px;
+        padding: 0 20px;
+    }
+    
+    .footer-company,
+    .footer-creator {
+        text-align: center;
+        min-width: auto;
+        width: 100%;
+    }
+    
+    .footer-company-social,
+    .footer-creator-social {
+        justify-content: center;
+        gap: 20px;
+    }
+    
+    .social-icon {
+        width: 40px;
+        height: 40px;
+    }
+    
+    .social-icon svg {
+        width: 20px;
+        height: 20px;
+    }
+}
