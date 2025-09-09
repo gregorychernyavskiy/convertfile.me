@@ -86,10 +86,32 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
 // API endpoint to get stats
 app.get('/api/stats', async (req, res) => {
+    let client;
     try {
-        const stats = await loadStats();
+        const { client: mongoClient, db } = await getMongoConnection();
+        client = mongoClient;
+        
+        const collection = db.collection('stats');
+        let stats = await collection.findOne({ _id: 'global' });
+        
+        if (!stats) {
+            // Create initial stats if they don't exist
+            stats = {
+                totalVisits: 0,
+                totalConversions: 0,
+                totalCombines: 0,
+                totalPdfToWord: 0,
+                dailyStats: {},
+                lastUpdated: new Date().toISOString()
+            };
+        }
+        
+        await client.close();
         res.json(stats);
     } catch (error) {
+        if (client) {
+            try { await client.close(); } catch (e) { console.error('Close error:', e); }
+        }
         console.error('Error fetching stats:', error);
         // Return default stats if database is unavailable
         res.json({
@@ -97,6 +119,8 @@ app.get('/api/stats', async (req, res) => {
             totalConversions: 0,
             totalCombines: 0,
             totalPdfToWord: 0,
+            dailyStats: {},
+            lastUpdated: new Date().toISOString(),
             error: 'Database unavailable'
         });
     }
@@ -128,24 +152,51 @@ app.get('/api/recent-activities', async (req, res) => {
 
 // Middleware to track page visits with detailed logging
 app.use(async (req, res, next) => {
-    // Only track visits to main pages, not assets
-    if (req.path === '/' || req.path.endsWith('.html')) {
-        try {
-            await trackEvent('visit');
-            
-            // Log detailed user activity
-            const clientInfo = extractClientInfo(req);
-            await logUserActivity({
-                action: 'page_visit',
-                page: req.path,
-                ...clientInfo
-            });
-            
-            console.log(`Visit tracked: ${req.path} from ${clientInfo.ip}`);
-        } catch (error) {
-            console.error('Error tracking visit (non-critical):', error);
-            // Continue processing the request even if tracking fails
-        }
+    // Track visits to main pages and API endpoints
+    const shouldTrack = req.path === '/' || 
+                       req.path === '/convert' || 
+                       req.path === '/combine' || 
+                       req.path === '/pdf-to-word' ||
+                       req.path === '/admin' ||
+                       req.path.endsWith('.html');
+    
+    if (shouldTrack) {
+        // Don't await tracking to avoid blocking the response
+        (async () => {
+            let client;
+            try {
+                const { client: mongoClient, db } = await getMongoConnection();
+                client = mongoClient;
+                
+                const collection = db.collection('stats');
+                let stats = await collection.findOne({ _id: 'global' });
+                
+                if (!stats) {
+                    stats = {
+                        _id: 'global',
+                        totalVisits: 1,
+                        totalConversions: 0,
+                        totalCombines: 0,
+                        totalPdfToWord: 0,
+                        dailyStats: {},
+                        lastUpdated: new Date().toISOString()
+                    };
+                    await collection.insertOne(stats);
+                } else {
+                    stats.totalVisits = (stats.totalVisits || 0) + 1;
+                    stats.lastUpdated = new Date().toISOString();
+                    await collection.replaceOne({ _id: 'global' }, stats);
+                }
+                
+                await client.close();
+                console.log(`Visit tracked: ${req.path}`);
+            } catch (error) {
+                if (client) {
+                    try { await client.close(); } catch (e) { console.error('Close error:', e); }
+                }
+                console.error('Error tracking visit (non-critical):', error.message);
+            }
+        })();
     }
     next();
 });
@@ -158,6 +209,120 @@ app.get('/api/health', (req, res) => {
         env: process.env.NODE_ENV || 'development',
         mongodb: process.env.MONGODB_URI ? 'configured' : 'not configured'
     });
+});
+
+// Debug endpoint to check environment variables (remove after testing)
+app.get('/api/debug-env', (req, res) => {
+    res.json({
+        hasMongoUri: !!process.env.MONGODB_URI,
+        nodeEnv: process.env.NODE_ENV,
+        mongoUriLength: process.env.MONGODB_URI ? process.env.MONGODB_URI.length : 0,
+        mongoUriPrefix: process.env.MONGODB_URI ? process.env.MONGODB_URI.substring(0, 20) + '...' : 'none'
+    });
+});
+
+// Test MongoDB connection endpoint
+app.get('/api/test-db', async (req, res) => {
+    try {
+        const db = require('./database');
+        await db.connectToDatabase();
+        const stats = await db.loadStats();
+        res.json({ 
+            success: true, 
+            message: 'Database connection successful',
+            stats: stats 
+        });
+    } catch (error) {
+        res.json({ 
+            success: false, 
+            error: error.message,
+            stack: error.stack 
+        });
+    }
+});
+
+// Test MongoDB connection endpoint
+app.get('/api/test-db', async (req, res) => {
+    try {
+        const db = require('./database');
+        await db.connectToDatabase();
+        const stats = await db.loadStats();
+        res.json({ 
+            success: true, 
+            message: 'Database connection successful',
+            stats: stats 
+        });
+    } catch (error) {
+        res.json({ 
+            success: false, 
+            error: error.message,
+            stack: error.stack 
+        });
+    }
+});
+
+// Simplified MongoDB helper for serverless
+async function getMongoConnection() {
+    const { MongoClient } = require('mongodb');
+    const uri = process.env.MONGODB_URI;
+    
+    if (!uri) {
+        throw new Error('MongoDB URI not found');
+    }
+    
+    const client = new MongoClient(uri, {
+        serverSelectionTimeoutMS: 5000,
+        connectTimeoutMS: 5000
+    });
+    
+    await client.connect();
+    return { client, db: client.db('convertfile') };
+}
+
+// Test tracking endpoint
+app.get('/api/test-tracking', async (req, res) => {
+    let client;
+    try {
+        const { client: mongoClient, db } = await getMongoConnection();
+        client = mongoClient;
+        
+        const collection = db.collection('stats');
+        let stats = await collection.findOne({ _id: 'global' });
+        
+        if (!stats) {
+            stats = {
+                _id: 'global',
+                totalVisits: 1,
+                totalConversions: 0,
+                totalCombines: 0,
+                totalPdfToWord: 0,
+                dailyStats: {},
+                lastUpdated: new Date().toISOString()
+            };
+            await collection.insertOne(stats);
+        } else {
+            stats.totalVisits = (stats.totalVisits || 0) + 1;
+            stats.lastUpdated = new Date().toISOString();
+            await collection.replaceOne({ _id: 'global' }, stats);
+        }
+        
+        await client.close();
+        
+        res.json({ 
+            success: true, 
+            message: 'Stats incremented successfully!',
+            stats: stats 
+        });
+    } catch (error) {
+        if (client) {
+            try { await client.close(); } catch (e) { console.error('Close error:', e); }
+        }
+        console.error('Tracking test error:', error);
+        res.json({ 
+            success: false, 
+            error: error.message
+        });
+    }
 });
 
 // Supported formats

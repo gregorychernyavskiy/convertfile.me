@@ -3,10 +3,10 @@ document.addEventListener("DOMContentLoaded", function () {
     
     // Determine the base API URL
     const getApiBaseUrl = () => {
-        // If we're on localhost, use the current port or default to 3000
+        // If we're on localhost, always target API on port 3000 (backend dev server)
+        // This avoids using whatever port the static server runs on (e.g., Live Server on 3001)
         if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
-            const port = window.location.port || '3000';
-            return `http://localhost:${port}`;
+            return 'http://localhost:3000';
         }
         // Otherwise, use the current origin (for serverless deployment)
         return window.location.origin;

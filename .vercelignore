@@ -1,0 +1,34 @@
+# Dependencies
+node_modules
+
+# Environment files (use Vercel dashboard for env vars)
+.env
+.env.local
+.env.*.local
+
+# Development files
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Runtime files
+uploads/
+user_stats.json
+*.log
+
+# Git
+.git
+.gitignore
+
+# IDE
+.vscode
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Temporary files
+tmp/
+temp/

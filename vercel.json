@@ -2,30 +2,61 @@
   "version": 2,
   "builds": [
     {
-      "src": "server.js",
-      "use": "@vercel/node"
+      "src": "api/index.js",
+      "use": "@vercel/node",
+      "config": {
+        "maxDuration": 30
+      }
+    },
+    {
+      "src": "frontend/**",
+      "use": "@vercel/static"
     }
   ],
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "/server.js"
+      "dest": "/api/index.js"
     },
     {
-      "src": "/(convert|combine|pdf-to-word|admin)",
-      "dest": "/server.js"
+      "src": "/convert",
+      "dest": "/api/index.js"
     },
     {
-      "src": "/(.*\\.(css|js|png|jpg|jpeg|gif|ico|svg|woff|woff2))",
-      "dest": "/$1"
+      "src": "/combine", 
+      "dest": "/api/index.js"
     },
     {
-      "src": "/(.*\\.html)",
+      "src": "/pdf-to-word",
+      "dest": "/api/index.js"
+    },
+    {
+      "src": "/admin",
+      "dest": "/api/index.js"
+    },
+    {
+      "src": "/style.css",
+      "dest": "/frontend/style.css"
+    },
+    {
+      "src": "/script.js",
+      "dest": "/frontend/script.js"
+    },
+    {
+      "src": "/(.*\\.(css|js|html|png|jpg|jpeg|gif|svg|ico|woff|woff2))",
+      "dest": "/frontend/$1"
+    },
+    {
+      "src": "/frontend/(.*)",
       "dest": "/frontend/$1"
     },
     {
       "src": "/",
-      "dest": "/server.js"
+      "dest": "/api/index.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/api/index.js"
     }
   ],
   "env": {

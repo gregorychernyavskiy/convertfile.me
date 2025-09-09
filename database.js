@@ -2,13 +2,33 @@ const { MongoClient } = require('mongodb');
 
 let client;
 let db;
+let isConnecting = false;
 
-// MongoDB connection with better error handling
+// MongoDB connection with better error handling and connection pooling
 async function connectToDatabase() {
-    if (db) {
+    // Prevent multiple simultaneous connections
+    if (isConnecting) {
+        // Wait for existing connection attempt
+        while (isConnecting) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+        }
         return db;
     }
 
+    // Reuse existing connection if available (for local development)
+    if (client && db && process.env.NODE_ENV !== 'production') {
+        try {
+            await db.admin().ping();
+            return db;
+        } catch (error) {
+            console.log('Existing connection failed, creating new one');
+            client = null;
+            db = null;
+        }
+    }
+
+    isConnecting = true;
+    
     try {
         const uri = process.env.MONGODB_URI;
         if (!uri) {
@@ -16,50 +36,61 @@ async function connectToDatabase() {
             return null;
         }
         
-        client = new MongoClient(uri, {
-            serverSelectionTimeoutMS: 5000, // Increased timeout to 5s
-            connectTimeoutMS: 10000,
-            socketTimeoutMS: 0,
-            maxPoolSize: 10, // Increased pool size
+        // Optimized connection settings for both local and serverless
+        const connectionOptions = {
+            serverSelectionTimeoutMS: process.env.NODE_ENV === 'production' ? 5000 : 10000,
+            connectTimeoutMS: process.env.NODE_ENV === 'production' ? 5000 : 10000,
+            socketTimeoutMS: 45000,
+            maxPoolSize: process.env.NODE_ENV === 'production' ? 1 : 10,
+            minPoolSize: 0,
             retryWrites: true,
-            w: 'majority'
-        });
+            w: 'majority',
+            readPreference: 'primary',
+            appName: 'ConvertFileMe'
+        };
         
-        // Set a timeout for the entire connection process
-        const connectPromise = client.connect();
-        const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error('Connection timeout after 8 seconds')), 8000);
-        });
+        // Create new client
+        const newClient = new MongoClient(uri, connectionOptions);
         
-        await Promise.race([connectPromise, timeoutPromise]);
-        db = client.db('convertfile');
+        await newClient.connect();
+        const newDb = newClient.db('convertfile');
         
         // Test the connection
-        await db.admin().ping();
-        console.log('Connected to MongoDB successfully');
-        return db;
+        await newDb.admin().ping();
+        console.log(`Connected to MongoDB successfully (${process.env.NODE_ENV || 'development'} mode)`);
+        
+        // Store globally for reuse
+        client = newClient;
+        db = newDb;
+        
+        return newDb;
     } catch (error) {
-        console.error('MongoDB connection error (database features disabled):', error.message);
-        if (client) {
-            try {
-                await client.close();
-            } catch (closeError) {
-                console.error('Error closing MongoDB client:', closeError.message);
-            }
+        console.error('MongoDB connection error:', error.message);
+        // In production, log more details for debugging
+        if (process.env.NODE_ENV === 'production') {
+            console.error('Connection details:', {
+                hasUri: !!process.env.MONGODB_URI,
+                uriPrefix: process.env.MONGODB_URI ? process.env.MONGODB_URI.substring(0, 20) + '...' : 'none'
+            });
         }
-        client = null;
-        db = null;
         return null;
+    } finally {
+        isConnecting = false;
     }
 }
 
 // Get stats collection with error handling
 async function getStatsCollection() {
-    const database = await connectToDatabase();
-    if (!database) {
-        throw new Error('Database not available');
+    try {
+        const database = await connectToDatabase();
+        if (!database) {
+            throw new Error('Database not available');
+        }
+        return database.collection('stats');
+    } catch (error) {
+        console.error('Error getting stats collection:', error.message);
+        throw error;
     }
-    return database.collection('stats');
 }
 
 // Load stats from database
