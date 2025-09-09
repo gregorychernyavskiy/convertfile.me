@@ -4,12 +4,22 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Convert Files - ConvertFile.me</title>
+    <script>
+        // Apply theme immediately to prevent flash
+        (function() {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        })();
+    </script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
     <div class="nav-bar">
         <div class="logo">
             <a href="index.html">ConvertFile.me</a>
+        </div>
+        <div class="nav-links">
+            <!-- Navigation links can be added here if needed -->
         </div>
     </div>
     <h1 id="pageTitle">Convert Files</h1>
@@ -48,6 +58,7 @@
         
         <a id="downloadLink" style="display: none;">Download File</a>
     </div>
+    <script src="theme-toggle.js"></script>
     <script src="script.js"></script>
 </body>
 </html>

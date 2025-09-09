@@ -122,9 +122,9 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     function handleFiles(files) {
-        // Check if adding new files will exceed the limit of 3
-        if (selectedFiles.size + files.length > 10) {
-            alert("You can only select a maximum of 10 files.");
+        // Check if adding new files will exceed the limit of 5
+        if (selectedFiles.size + files.length > 5) {
+            alert("You can only select a maximum of 5 files.");
             return;
         }
 

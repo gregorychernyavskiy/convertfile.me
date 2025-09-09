@@ -1,6 +1,65 @@
 /* Import Google Font - Poppins (Bold & Rounded) */
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap');
 
+/* CSS Variables for Theme */
+:root {
+    --bg-gradient-start: #ffffff;
+    --bg-gradient-end: #f8f9fa;
+    --navbar-bg: #ffffff;
+    --navbar-shadow: rgba(0, 0, 0, 0.1);
+    --text-primary: #1E293B;
+    --text-secondary: #64748B;
+    --container-bg: #ffffff;
+    --container-border: #e0e0e0;
+    --drop-area-bg: #F8FAFC;
+    --drop-area-hover: #E0F2FE;
+    --footer-bg: #f8f9fa;
+    --footer-border: #e0e0e0;
+    --stats-bg-start: #f0f9ff;
+    --stats-bg-end: #e0f2fe;
+    --stats-border: #b3e5fc;
+    --feature-card-bg: #ffffff;
+    --feature-card-border: #e0e0e0;
+    --feature-card-shadow: rgba(0, 0, 0, 0.08);
+}
+
+/* Dark Theme Variables */
+[data-theme="dark"] {
+    --bg-gradient-start: #000000;
+    --bg-gradient-end: #000000;
+    --navbar-bg: #000000;
+    --navbar-shadow: rgba(0, 0, 0, 0.5);
+    --text-primary: #f1f5f9;
+    --text-secondary: #94a3b8;
+    --container-bg: #1a1a1a;
+    --container-border: #444444;
+    --drop-area-bg: #1a1a1a;
+    --drop-area-hover: #2a2a2a;
+    --footer-bg: #000000;
+    --footer-border: #444444;
+    --stats-bg-start: #000000;
+    --stats-bg-end: #1a1a1a;
+    --stats-border: #444444;
+    --feature-card-bg: #1a1a1a;
+    --feature-card-border: #444444;
+    --feature-card-shadow: rgba(0, 0, 0, 0.5);
+}
+
+/* Remove all blue outlines and focus rings */
+*, *:before, *:after {
+    outline: none !important;
+    -webkit-tap-highlight-color: transparent !important;
+}
+
+button:focus,
+input:focus,
+select:focus,
+textarea:focus,
+a:focus {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
 /* Global Styles */
 body {
     display: flex;
@@ -8,13 +67,14 @@ body {
     align-items: center;
     justify-content: flex-start;
     min-height: 100vh;
-    background: linear-gradient(to bottom right, #ffffff, #f8f9fa);
+    background: linear-gradient(to bottom right, var(--bg-gradient-start), var(--bg-gradient-end));
     font-family: 'Poppins', sans-serif;
     font-weight: 600;
     margin: 0;
     text-align: center;
-    color: #1E293B;
+    color: var(--text-primary);
     padding-top: 80px; /* Push content below navbar */
+    transition: background 0.3s ease, color 0.3s ease;
 }
 
 /* Stick Navbar to the Top */
@@ -24,12 +84,43 @@ body {
     top: 0;
     left: 0;
     padding: 15px 30px;
-    background: #ffffff;
-    box-shadow: 0px 4px 12px rgba(0, 0, 0, 0.1);
+    background: var(--navbar-bg);
+    box-shadow: 0px 4px 12px var(--navbar-shadow);
     z-index: 1000;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    transition: background 0.3s ease, box-shadow 0.3s ease;
+}
+
+/* Theme Toggle Button */
+.theme-toggle {
+    position: absolute;
+    top: 35%;
+    right: 90px;
+    transform: translateY(-50%);
+    background: none;
+    border: 2px solid #38BDF8;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    color: #38BDF8;
+    font-size: 18px;
+}
+
+.theme-toggle:hover {
+    background: #38BDF8;
+    color: white;
+    transform: translateY(-50%) scale(1.1);
+}
+
+.theme-toggle:active {
+    transform: translateY(-50%) scale(0.95);
 }
 
 /* Navbar Logo */
@@ -53,7 +144,7 @@ body {
 /* Individual Buttons */
 .nav-links a {
     text-decoration: none;
-    color: #1E293B;
+    color: var(--text-primary);
     font-weight: 600;
     padding: 10px 16px; /* Ensures consistent size */
     border-radius: 8px;
@@ -109,14 +200,15 @@ h1 {
 /* Convert Files Section */
 .container {
     margin-top: 20px;
-    background: #ffffff;
+    background: var(--container-bg);
     padding: 60px 50px;
     border-radius: 16px;
     box-shadow: 0px 6px 16px rgba(0, 0, 0, 0.1);
     width: 800px;
     text-align: center;
-    color: #1E293B;
-    border: 1px solid #e0e0e0;
+    color: var(--text-primary);
+    border: 1px solid var(--container-border);
+    transition: background 0.3s ease, border-color 0.3s ease, color 0.3s ease;
 }
 
 /* Welcome Section Styling */
@@ -127,12 +219,13 @@ h1 {
 .welcome-title {
     font-size: 38px;
     font-weight: 700;
-    color: #1E293B;
+    color: var(--text-primary);
     margin-bottom: 15px;
     font-family: 'Poppins', sans-serif;
     text-transform: none;
     letter-spacing: normal;
     text-shadow: none;
+    transition: color 0.3s ease;
 }
 
 .welcome-title .brand-name {
@@ -142,9 +235,10 @@ h1 {
 .welcome-subtitle {
     font-size: 20px;
     font-weight: 500;
-    color: #64748B;
+    color: var(--text-secondary);
     margin: 0;
     font-family: 'Poppins', sans-serif;
+    transition: color 0.3s ease;
 }
 
 /* Drop Area */
@@ -153,15 +247,15 @@ h1 {
     padding: 30px;
     border-radius: 14px;
     cursor: pointer;
-    background: #F8FAFC;
-    color: #1E293B;
+    background: var(--drop-area-bg);
+    color: var(--text-primary);
     font-weight: 700;
-    transition: background 0.3s, border-color 0.3s;
+    transition: background 0.3s, border-color 0.3s, color 0.3s;
     font-size: 18px;
 }
 
 .drop-area:hover {
-    background: #E0F2FE;
+    background: var(--drop-area-hover);
     border-color: #2563eb;
 }
 
@@ -212,17 +306,19 @@ h1 {
     display: none;
     margin-top: 20px;
     font-size: 16px;
-    color: #1E293B;
+    color: var(--text-primary);
     text-align: center;
+    transition: color 0.3s ease;
 }
 
 /* Keep "Convert to" Black */
 .convert-options label {
     font-size: 18px;
     font-weight: bold;
-    color: black;
+    color: var(--text-primary);
     text-transform: uppercase;
     letter-spacing: 1px;
+    transition: color 0.3s ease;
 }
 
 /* Make Dropdown Smaller with Dashed Blue Border */
@@ -230,10 +326,10 @@ h1 {
     padding: 6px 12px;
     font-size: 16px;
     font-weight: bold;
-    color: black;
+    color: var(--text-primary);
     border: 2px dashed #38BDF8; /* Correct Blue */
     border-radius: 6px;
-    background: white;
+    background: var(--container-bg);
     cursor: pointer;
     width: auto;
     min-width: 120px;
@@ -243,7 +339,7 @@ h1 {
 
 .convert-options select:hover {
     border-color: #2563EB;
-    background: #E0F2FE;
+    background: var(--drop-area-hover);
 }
 
 /* Button & Select */
@@ -333,16 +429,17 @@ button:hover {
 }
 
 .feature-card {
-    background: #ffffff;
+    background: var(--feature-card-bg);
     border-radius: 16px;
     padding: 30px 25px;
-    box-shadow: 0px 8px 24px rgba(0, 0, 0, 0.08);
-    border: 1px solid #e0e0e0;
+    box-shadow: 0px 8px 24px var(--feature-card-shadow);
+    border: 1px solid var(--feature-card-border);
     text-align: center;
     min-height: 280px;
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
+    transition: background 0.3s ease, border-color 0.3s ease, box-shadow 0.3s ease;
 }
 
 .feature-icon {
@@ -373,18 +470,20 @@ button:hover {
 .feature-card h3 {
     font-size: 24px;
     font-weight: 700;
-    color: #1E293B;
+    color: var(--text-primary);
     margin-bottom: 15px;
     font-family: 'Poppins', sans-serif;
+    transition: color 0.3s ease;
 }
 
 .feature-card p {
     font-size: 16px;
-    color: #64748B;
+    color: var(--text-secondary);
     line-height: 1.6;
     margin: 0;
     font-weight: 400;
     font-family: 'Poppins', sans-serif;
+    transition: color 0.3s ease;
 }
 
 /* Responsive Design for Feature Cards */
@@ -424,11 +523,28 @@ button:hover {
         flex-direction: column;
         padding: 10px 20px;
     }
+    
+    /* Adjust theme toggle for mobile */
+    .theme-toggle {
+        right: 20px;
+        top: 15px;
+        transform: none;
+        position: absolute;
+    }
+    
+    .theme-toggle:hover {
+        transform: scale(1.1);
+    }
+    
+    .theme-toggle:active {
+        transform: scale(0.95);
+    }
 
     .nav-links {
         flex-direction: column; /* Stack links on smaller screens */
         gap: 10px;
         margin-top: 10px;
+        margin-right: 0;
     }
 
     .nav-links a {
@@ -466,12 +582,13 @@ button:hover {
 
 /* Stats Section */
 .stats-section {
-    background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%);
-    border-top: 1px solid #b3e5fc;
-    border-bottom: 1px solid #b3e5fc;
+    background: linear-gradient(135deg, var(--stats-bg-start) 0%, var(--stats-bg-end) 100%);
+    border-top: 1px solid var(--stats-border);
+    border-bottom: 1px solid var(--stats-border);
     padding: 40px 0;
     margin-top: 60px;
     width: 100%;
+    transition: background 0.3s ease, border-color 0.3s ease;
 }
 
 .stats-container {
@@ -484,10 +601,11 @@ button:hover {
 .stats-container h3 {
     font-size: 28px;
     font-weight: 700;
-    color: #1e293b;
+    color: var(--text-primary);
     margin-bottom: 30px;
     text-transform: uppercase;
     letter-spacing: 1px;
+    transition: color 0.3s ease;
 }
 
 .stats-grid {
@@ -498,12 +616,13 @@ button:hover {
 }
 
 .stat-item {
-    background: white;
+    background: var(--container-bg);
     padding: 25px 20px;
     border-radius: 16px;
     box-shadow: 0 8px 24px rgba(56, 189, 248, 0.15);
     border: 2px solid rgba(56, 189, 248, 0.1);
     text-align: center;
+    transition: background 0.3s ease;
 }
 
 .stat-number {
@@ -519,9 +638,10 @@ button:hover {
     display: block;
     font-size: 14px;
     font-weight: 600;
-    color: #64748b;
+    color: var(--text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    transition: color 0.3s ease;
 }
 
 @media (max-width: 768px) {
@@ -553,11 +673,12 @@ button:hover {
 
 /* Footer Section */
 .footer {
-    background: #f8f9fa;
-    border-top: 1px solid #e0e0e0;
+    background: var(--footer-bg);
+    border-top: 1px solid var(--footer-border);
     padding: 35px 0 30px;
     margin-top: 60px;
     width: 100%;
+    transition: background 0.3s ease, border-color 0.3s ease;
 }
 
 .footer-content {
@@ -585,9 +706,10 @@ button:hover {
 .creator-title {
     font-size: 16px;
     font-weight: 600;
-    color: #1E293B;
+    color: var(--text-primary);
     margin: 0 0 15px 0;
     font-family: 'Poppins', sans-serif;
+    transition: color 0.3s ease;
 }
 
 .footer-contact .footer-email {
@@ -601,11 +723,12 @@ button:hover {
 }
 
 .creator-title {
-    color: #1E293B;
+    color: var(--text-primary);
     font-size: 16px;
     font-weight: 600;
     margin: 0 0 15px 0;
     font-family: 'Poppins', sans-serif;
+    transition: color 0.3s ease;
 }
 
 .footer-email {

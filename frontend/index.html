@@ -4,6 +4,13 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ConvertFile.me</title>
+    <script>
+        // Apply theme immediately to prevent flash
+        (function() {
+            const savedTheme = localStorage.getItem('theme') || 'light';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+        })();
+    </script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -11,10 +18,13 @@
         <div class="logo">
             <a href="/" onclick="reloadPage(); return false;">ConvertFile.me</a>
         </div>
+        <div class="nav-links">
+            <!-- Navigation links can be added here if needed -->
+        </div>
     </div>
     <div class="container">
         <div class="welcome-section">
-            <h2 class="welcome-title">Welcome to <span class="brand-name">convertfile.me</span></h2>
+            <h2 class="welcome-title">Welcome to <span class="brand-name">ConvertFile.me</span></h2>
             <p class="welcome-subtitle">Please make your selection:</p>
         </div>
         <div class="selection-buttons" id="selectionButtons">
@@ -122,6 +132,7 @@
             </div>
         </div>
     </footer>
+    <script src="theme-toggle.js"></script>
     <script src="script.js"></script>
 </body>
 </html>
