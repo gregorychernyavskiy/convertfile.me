@@ -27,45 +27,11 @@ document.addEventListener("DOMContentLoaded", function () {
         if (orientationSuggestion) {
             orientationSuggestion.classList.add('hidden');
             localStorage.setItem('orientationSuggestionDismissed', 'true');
-            
-            // Reset styling
-            orientationSuggestion.style.zIndex = '';
-            orientationSuggestion.style.background = '';
-            orientationSuggestion.classList.remove('urgent');
         }
     };
 
-    // Function to forcefully suggest rotation
+    // Function to suggest rotation (simple version)
     window.suggestRotation = function() {
-        const orientationSuggestion = document.getElementById('orientationSuggestion');
-        const icon = orientationSuggestion.querySelector('.orientation-icon');
-        const message = orientationSuggestion.querySelector('.orientation-message');
-        const rotateButton = orientationSuggestion.querySelector('.rotate-suggestion');
-        
-        // Create urgent messaging
-        message.textContent = "Rotate your device now";
-        message.style.color = '#FF6B35';
-        message.style.animation = 'urgentPulse 0.8s ease-in-out infinite';
-        
-        // Make icon more animated
-        icon.style.animation = 'forcedRotate 0.6s ease-in-out infinite';
-        
-        // Update button
-        rotateButton.disabled = true;
-        rotateButton.textContent = 'Rotate Now!';
-        rotateButton.style.background = '#FF6B35';
-        
-        // Make overlay more attention-grabbing
-        orientationSuggestion.classList.add('urgent');
-        
-        // Disable main site functionality
-        const mainContainer = document.querySelector('.container');
-        if (mainContainer) {
-            mainContainer.style.pointerEvents = 'none';
-            mainContainer.style.filter = 'blur(8px)';
-            mainContainer.style.userSelect = 'none';
-        }
-        
         // Try to force landscape orientation
         forceLandscapeOrientation();
         
@@ -74,35 +40,10 @@ document.addEventListener("DOMContentLoaded", function () {
             if (window.innerWidth > window.innerHeight) {
                 // Success! Device is now in landscape
                 clearInterval(checkInterval);
-                
-                // Re-enable site functionality
-                if (mainContainer) {
-                    mainContainer.style.pointerEvents = '';
-                    mainContainer.style.filter = '';
-                    mainContainer.style.userSelect = '';
-                }
-                
                 hideOrientationSuggestion();
                 return;
             }
         }, 500);
-        
-        // After 30 seconds, make it even more urgent
-        setTimeout(() => {
-            if (window.innerHeight > window.innerWidth) {
-                message.textContent = "Please rotate to landscape mode";
-                message.style.fontSize = '24px';
-                message.style.fontWeight = 'bold';
-                orientationSuggestion.style.background = 'linear-gradient(135deg, rgba(255, 0, 0, 0.95) 0%, rgba(139, 0, 0, 0.95) 100%)';
-            } else {
-                clearInterval(checkInterval);
-                if (mainContainer) {
-                    mainContainer.style.pointerEvents = '';
-                    mainContainer.style.filter = '';
-                    mainContainer.style.userSelect = '';
-                }
-            }
-        }, 30000);
     };
 
     // Function to force landscape orientation using multiple methods

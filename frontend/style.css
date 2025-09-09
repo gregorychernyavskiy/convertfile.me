@@ -583,19 +583,6 @@ button:hover {
     -webkit-overflow-scrolling: touch;
 }
 
-/* When suggestion becomes urgent */
-.orientation-suggestion.urgent {
-    background: linear-gradient(135deg, rgba(255, 107, 53, 0.95) 0%, rgba(255, 69, 0, 0.95) 100%) !important;
-    animation: urgentShake 0.5s ease-in-out infinite;
-}
-
-/* Shake animation for urgent state */
-@keyframes urgentShake {
-    0%, 100% { transform: translateX(0); }
-    25% { transform: translateX(-5px); }
-    75% { transform: translateX(5px); }
-}
-
 /* Make the overlay unescapable on mobile */
 @media screen and (max-width: 768px) and (orientation: portrait) {
     .orientation-suggestion:not(.hidden) {
@@ -690,19 +677,6 @@ button:hover {
     50% { 
         transform: scale(1.05); 
         opacity: 0.8; 
-    }
-}
-
-@keyframes urgentPulse {
-    0%, 100% { 
-        transform: scale(1); 
-        opacity: 1; 
-        color: #FF6B35;
-    }
-    50% { 
-        transform: scale(1.1); 
-        opacity: 0.7; 
-        color: #FF4500;
     }
 }
 
