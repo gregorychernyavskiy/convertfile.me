@@ -1,6 +1,42 @@
 document.addEventListener("DOMContentLoaded", function () {
     let selectedFiles = new Map();
     
+    // Orientation handling for mobile devices
+    function handleOrientationChange() {
+        const orientationSuggestion = document.getElementById('orientationSuggestion');
+        if (!orientationSuggestion) return;
+
+        // Check if it's a mobile device and in portrait mode
+        const isMobile = window.innerWidth <= 768 && window.innerHeight <= 1024;
+        const isPortrait = window.innerHeight > window.innerWidth;
+        const hasBeenDismissed = localStorage.getItem('orientationSuggestionDismissed') === 'true';
+        
+        // Additional check for touch capability (mobile/tablet)
+        const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
+        if (isMobile && isPortrait && !hasBeenDismissed && isTouchDevice) {
+            orientationSuggestion.classList.remove('hidden');
+        } else {
+            orientationSuggestion.classList.add('hidden');
+        }
+    }
+
+    // Function to hide orientation suggestion
+    window.hideOrientationSuggestion = function() {
+        const orientationSuggestion = document.getElementById('orientationSuggestion');
+        if (orientationSuggestion) {
+            orientationSuggestion.classList.add('hidden');
+            localStorage.setItem('orientationSuggestionDismissed', 'true');
+        }
+    };
+
+    // Check orientation on load and when orientation changes
+    handleOrientationChange();
+    window.addEventListener('orientationchange', function() {
+        setTimeout(handleOrientationChange, 100); // Small delay to ensure orientation has changed
+    });
+    window.addEventListener('resize', handleOrientationChange);
+    
     // Determine the base API URL
     const getApiBaseUrl = () => {
         // If we're on localhost, always target API on port 3000 (backend dev server)

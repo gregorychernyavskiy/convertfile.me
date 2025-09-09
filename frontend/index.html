@@ -14,6 +14,14 @@
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
+    <!-- Orientation Suggestion Overlay -->
+    <div class="orientation-suggestion" id="orientationSuggestion">
+        <div class="orientation-icon">📱</div>
+        <div class="orientation-message">For the best experience, please rotate your device to landscape mode</div>
+        <div class="orientation-submessage">This website is optimized for wider screens</div>
+        <button class="continue-anyway" onclick="hideOrientationSuggestion()">Continue in Portrait</button>
+    </div>
+
     <div class="nav-bar">
         <div class="logo">
             <a href="/" onclick="reloadPage(); return false;">ConvertFile.me</a>
