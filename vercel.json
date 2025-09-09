@@ -1,18 +1,10 @@
 {
   "version": 2,
-  "builds": [
-    {
-      "src": "api/index.js",
-      "use": "@vercel/node",
-      "config": {
-        "maxDuration": 30
-      }
-    },
-    {
-      "src": "public/**",
-      "use": "@vercel/static"
+  "functions": {
+    "api/index.js": {
+      "maxDuration": 30
     }
-  ],
+  },
   "routes": [
     {
       "src": "/api/(.*)",
@@ -35,19 +27,15 @@
       "dest": "/api/index.js"
     },
     {
-      "src": "/style.css",
-      "dest": "/public/css/style.css"
+      "src": "/css/(.*)",
+      "dest": "/public/css/$1"
     },
     {
-      "src": "/script.js",
-      "dest": "/public/js/script.js"
+      "src": "/js/(.*)",
+      "dest": "/public/js/$1"
     },
     {
       "src": "/(.*\\.(css|js|html|png|jpg|jpeg|gif|svg|ico|woff|woff2))",
-      "dest": "/public/$1"
-    },
-    {
-      "src": "/public/(.*)",
       "dest": "/public/$1"
     },
     {
