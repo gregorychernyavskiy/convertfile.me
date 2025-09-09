@@ -641,45 +641,6 @@ button:hover {
     max-width: 280px;
 }
 
-.orientation-benefits {
-    background: rgba(56, 189, 248, 0.1);
-    border: 2px solid rgba(56, 189, 248, 0.2);
-    border-radius: 12px;
-    padding: 20px;
-    margin-bottom: 30px;
-    max-width: 320px;
-}
-
-.orientation-benefits h4 {
-    color: #38BDF8;
-    font-size: 16px;
-    font-weight: 700;
-    margin: 0 0 10px 0;
-}
-
-.orientation-benefits ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    text-align: left;
-}
-
-.orientation-benefits li {
-    color: var(--text-secondary);
-    font-size: 14px;
-    margin-bottom: 8px;
-    padding-left: 20px;
-    position: relative;
-}
-
-.orientation-benefits li:before {
-    content: "✓";
-    color: #38BDF8;
-    font-weight: bold;
-    position: absolute;
-    left: 0;
-}
-
 .orientation-buttons {
     display: flex;
     gap: 15px;
@@ -704,27 +665,6 @@ button:hover {
     background: #2563eb;
     transform: translateY(-2px);
     box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
-}
-
-.continue-anyway {
-    background: transparent;
-    color: var(--text-secondary);
-    border: 1px solid var(--text-secondary);
-    padding: 8px 16px;
-    border-radius: 8px;
-    font-weight: 400;
-    cursor: pointer;
-    font-size: 12px;
-    transition: all 0.3s ease;
-    opacity: 0.6;
-    /* Make it less prominent */
-    margin-top: 10px;
-}
-
-.continue-anyway:hover {
-    background: var(--text-secondary);
-    color: var(--bg-gradient-start);
-    opacity: 0.8;
 }
 
 @keyframes rotatePhone {

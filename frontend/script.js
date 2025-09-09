@@ -14,59 +14,24 @@ document.addEventListener("DOMContentLoaded", function () {
         // Additional check for touch capability (mobile/tablet)
         const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
-        // More aggressive showing - reset dismissal after some time for persistent reminders
-        const dismissedTime = localStorage.getItem('orientationDismissedTime');
-        const now = Date.now();
-        const oneHour = 60 * 60 * 1000; // 1 hour in milliseconds
-        
-        // Reset dismissal if it's been more than an hour
-        if (dismissedTime && (now - parseInt(dismissedTime)) > oneHour) {
-            localStorage.removeItem('orientationSuggestionDismissed');
-            localStorage.removeItem('orientationDismissedTime');
-        }
-
-        if (isMobile && isPortrait && isTouchDevice) {
-            // Show overlay more aggressively - ignore dismissal for first few times
-            const dismissCount = parseInt(localStorage.getItem('orientationDismissCount') || '0');
-            
-            if (dismissCount < 3 || !hasBeenDismissed) {
-                orientationSuggestion.classList.remove('hidden');
-                
-                // Auto-trigger suggestion after 3 seconds if still in portrait
-                setTimeout(() => {
-                    if (window.innerHeight > window.innerWidth && !orientationSuggestion.classList.contains('hidden')) {
-                        // Make it more attention-grabbing
-                        orientationSuggestion.style.zIndex = '99999';
-                        orientationSuggestion.style.background = 'linear-gradient(135deg, rgba(255, 107, 53, 0.95) 0%, rgba(255, 69, 0, 0.95) 100%)';
-                    }
-                }, 3000);
-            }
+        if (isMobile && isPortrait && isTouchDevice && !hasBeenDismissed) {
+            orientationSuggestion.classList.remove('hidden');
         } else {
             orientationSuggestion.classList.add('hidden');
-            // Reset styling when hiding
-            orientationSuggestion.style.zIndex = '';
-            orientationSuggestion.style.background = '';
         }
     }
 
-    // Function to hide orientation suggestion (with tracking)
+    // Function to hide orientation suggestion
     window.hideOrientationSuggestion = function() {
         const orientationSuggestion = document.getElementById('orientationSuggestion');
         if (orientationSuggestion) {
-            // Track how many times user has dismissed this
-            const dismissCount = parseInt(localStorage.getItem('orientationDismissCount') || '0');
-            localStorage.setItem('orientationDismissCount', (dismissCount + 1).toString());
-            localStorage.setItem('orientationDismissedTime', Date.now().toString());
-            
-            // Only permanently dismiss after 3 attempts
-            if (dismissCount >= 2) {
-                localStorage.setItem('orientationSuggestionDismissed', 'true');
-            }
-            
             orientationSuggestion.classList.add('hidden');
+            localStorage.setItem('orientationSuggestionDismissed', 'true');
+            
             // Reset styling
             orientationSuggestion.style.zIndex = '';
             orientationSuggestion.style.background = '';
+            orientationSuggestion.classList.remove('urgent');
         }
     };
 
@@ -76,21 +41,19 @@ document.addEventListener("DOMContentLoaded", function () {
         const icon = orientationSuggestion.querySelector('.orientation-icon');
         const message = orientationSuggestion.querySelector('.orientation-message');
         const rotateButton = orientationSuggestion.querySelector('.rotate-suggestion');
-        const continueButton = orientationSuggestion.querySelector('.continue-anyway');
         
-        // Create more urgent messaging
-        message.textContent = "Please rotate your device now! 📱➡️📱";
+        // Create urgent messaging
+        message.textContent = "Rotate your device now";
         message.style.color = '#FF6B35';
         message.style.animation = 'urgentPulse 0.8s ease-in-out infinite';
         
         // Make icon more animated
         icon.style.animation = 'forcedRotate 0.6s ease-in-out infinite';
         
-        // Disable the rotate button temporarily and hide continue button
+        // Update button
         rotateButton.disabled = true;
         rotateButton.textContent = 'Rotate Now!';
         rotateButton.style.background = '#FF6B35';
-        continueButton.style.display = 'none'; // Hide the continue option
         
         // Make overlay more attention-grabbing
         orientationSuggestion.classList.add('urgent');
@@ -103,10 +66,10 @@ document.addEventListener("DOMContentLoaded", function () {
             mainContainer.style.userSelect = 'none';
         }
         
-        // Try to force landscape orientation using all available APIs
+        // Try to force landscape orientation
         forceLandscapeOrientation();
         
-        // Start checking for orientation change more frequently
+        // Check for orientation change
         const checkInterval = setInterval(() => {
             if (window.innerWidth > window.innerHeight) {
                 // Success! Device is now in landscape
@@ -124,17 +87,14 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         }, 500);
         
-        // Don't reset automatically - force user to rotate
-        // Only reset if they somehow get to landscape or after a very long time
+        // After 30 seconds, make it even more urgent
         setTimeout(() => {
             if (window.innerHeight > window.innerWidth) {
-                // Still in portrait after 30 seconds - make it even more urgent
-                message.textContent = "This site requires landscape mode! Please rotate your device.";
+                message.textContent = "Please rotate to landscape mode";
                 message.style.fontSize = '24px';
                 message.style.fontWeight = 'bold';
                 orientationSuggestion.style.background = 'linear-gradient(135deg, rgba(255, 0, 0, 0.95) 0%, rgba(139, 0, 0, 0.95) 100%)';
             } else {
-                // Finally in landscape - clean up
                 clearInterval(checkInterval);
                 if (mainContainer) {
                     mainContainer.style.pointerEvents = '';
@@ -193,45 +153,6 @@ document.addEventListener("DOMContentLoaded", function () {
         setTimeout(handleOrientationChange, 100); // Small delay to ensure orientation has changed
     });
     window.addEventListener('resize', handleOrientationChange);
-    
-    // Periodic check to ensure mobile users are in landscape (more aggressive)
-    setInterval(() => {
-        const isMobile = window.innerWidth <= 768 && window.innerHeight <= 1024;
-        const isPortrait = window.innerHeight > window.innerWidth;
-        const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
-        const orientationSuggestion = document.getElementById('orientationSuggestion');
-        
-        if (isMobile && isPortrait && isTouchDevice && orientationSuggestion) {
-            const dismissCount = parseInt(localStorage.getItem('orientationDismissCount') || '0');
-            
-            // If user has dismissed less than 3 times, keep showing
-            if (dismissCount < 3) {
-                orientationSuggestion.classList.remove('hidden');
-                
-                // After 5 seconds in portrait, make it urgent
-                setTimeout(() => {
-                    if (window.innerHeight > window.innerWidth && !orientationSuggestion.classList.contains('hidden')) {
-                        orientationSuggestion.classList.add('urgent');
-                        
-                        // Try to prevent user from using the site
-                        const mainContainer = document.querySelector('.container');
-                        if (mainContainer) {
-                            mainContainer.style.pointerEvents = 'none';
-                            mainContainer.style.filter = 'blur(5px)';
-                        }
-                    }
-                }, 5000);
-            }
-        } else if (orientationSuggestion) {
-            // Re-enable site functionality when in landscape
-            orientationSuggestion.classList.remove('urgent');
-            const mainContainer = document.querySelector('.container');
-            if (mainContainer) {
-                mainContainer.style.pointerEvents = '';
-                mainContainer.style.filter = '';
-            }
-        }
-    }, 2000); // Check every 2 seconds
     
     // Determine the base API URL
     const getApiBaseUrl = () => {
