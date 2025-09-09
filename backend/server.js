@@ -902,29 +902,29 @@ app.post("/pdf-to-word", upload.array("files"), async (req, res) => {
 });
 
 // Serve static files (CSS, JS, images)
-app.use(express.static(path.join(__dirname, "frontend")));
+app.use(express.static(path.join(__dirname, "../public")));
 
 // Main HTML for root
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, 'frontend', 'index.html'));
+    res.sendFile(path.join(__dirname, '../public', 'index.html'));
 });
 
 // HTML page routes
 app.get('/convert', (req, res) => {
-    res.sendFile(path.join(__dirname, 'frontend', 'convert.html'));
+    res.sendFile(path.join(__dirname, '../public', 'convert.html'));
 });
 
 app.get('/combine', (req, res) => {
-    res.sendFile(path.join(__dirname, 'frontend', 'combine.html'));
+    res.sendFile(path.join(__dirname, '../public', 'combine.html'));
 });
 
 app.get('/pdf-to-word', (req, res) => {
-    res.sendFile(path.join(__dirname, 'frontend', 'pdf-to-word.html'));
+    res.sendFile(path.join(__dirname, '../public', 'pdf-to-word.html'));
 });
 
 // Admin dashboard
 app.get('/admin', (req, res) => {
-    res.sendFile(path.join(__dirname, 'frontend', 'admin.html'));
+    res.sendFile(path.join(__dirname, '../public', 'admin.html'));
 });
 
 // 404 handler

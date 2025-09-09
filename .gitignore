@@ -102,6 +102,10 @@ typings/
 uploads/*
 !uploads/.gitkeep
 
+# Temporary files
+/tmp/*
+backend/tmp/*
+
 # OS generated files
 .DS_Store
 .DS_Store?

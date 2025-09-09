@@ -2,8 +2,6 @@
 
 A powerful, serverless file conversion platform that supports image conversion, PDF creation, file combining, and PDF to Word conversion.
 
-## DEMO: https://www.youtube.com/watch?v=dr9hlGkTdK0
-
 ## Features
 
 - **Image Conversion**: Convert between JPG, PNG, TIFF, HEIC, GIF, BMP, WEBP, AVIF, SVG formats
