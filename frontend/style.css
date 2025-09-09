@@ -628,31 +628,7 @@ button:hover {
     max-width: 280px;
 }
 
-.orientation-buttons {
-    display: flex;
-    gap: 15px;
-    flex-wrap: wrap;
-    justify-content: center;
-}
 
-.rotate-suggestion {
-    background: #38BDF8;
-    color: white;
-    border: none;
-    padding: 15px 30px;
-    border-radius: 12px;
-    font-weight: 700;
-    cursor: pointer;
-    font-size: 16px;
-    transition: all 0.3s ease;
-    box-shadow: 0 4px 12px rgba(56, 189, 248, 0.3);
-}
-
-.rotate-suggestion:hover {
-    background: #2563eb;
-    transform: translateY(-2px);
-    box-shadow: 0 6px 16px rgba(37, 99, 235, 0.4);
-}
 
 @keyframes rotatePhone {
     0%, 100% { 

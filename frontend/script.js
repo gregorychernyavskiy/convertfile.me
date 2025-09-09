@@ -34,16 +34,6 @@ document.addEventListener("DOMContentLoaded", function () {
     window.suggestRotation = function() {
         // Try to force landscape orientation
         forceLandscapeOrientation();
-        
-        // Check for orientation change
-        const checkInterval = setInterval(() => {
-            if (window.innerWidth > window.innerHeight) {
-                // Success! Device is now in landscape
-                clearInterval(checkInterval);
-                hideOrientationSuggestion();
-                return;
-            }
-        }, 500);
     };
 
     // Function to force landscape orientation using multiple methods
