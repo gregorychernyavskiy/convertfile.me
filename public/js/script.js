@@ -1,6 +1,90 @@
 document.addEventListener("DOMContentLoaded", function () {
     let selectedFiles = new Map();
     
+    // Orientation handling for mobile devices
+    function handleOrientationChange() {
+        const orientationSuggestion = document.getElementById('orientationSuggestion');
+        if (!orientationSuggestion) return;
+
+        // Check if it's a mobile device and in portrait mode
+        const isMobile = window.innerWidth <= 768 && window.innerHeight <= 1024;
+        const isPortrait = window.innerHeight > window.innerWidth;
+        const hasBeenDismissed = localStorage.getItem('orientationSuggestionDismissed') === 'true';
+        
+        // Additional check for touch capability (mobile/tablet)
+        const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
+        if (isMobile && isPortrait && isTouchDevice && !hasBeenDismissed) {
+            orientationSuggestion.classList.remove('hidden');
+        } else {
+            orientationSuggestion.classList.add('hidden');
+        }
+    }
+
+    // Function to hide orientation suggestion
+    window.hideOrientationSuggestion = function() {
+        const orientationSuggestion = document.getElementById('orientationSuggestion');
+        if (orientationSuggestion) {
+            orientationSuggestion.classList.add('hidden');
+            localStorage.setItem('orientationSuggestionDismissed', 'true');
+        }
+    };
+
+    // Function to suggest rotation (simple version)
+    window.suggestRotation = function() {
+        // Try to force landscape orientation
+        forceLandscapeOrientation();
+    };
+
+    // Function to force landscape orientation using multiple methods
+    function forceLandscapeOrientation() {
+        // Method 1: Screen Orientation API
+        if (screen.orientation && screen.orientation.lock) {
+            try {
+                screen.orientation.lock('landscape-primary').catch(() => {
+                    screen.orientation.lock('landscape').catch(() => {
+                        console.log('Screen orientation lock not supported');
+                    });
+                });
+            } catch (e) {
+                console.log('Screen orientation API error:', e);
+            }
+        }
+        
+        // Method 2: Fullscreen API (helps on some devices)
+        if (document.documentElement.requestFullscreen) {
+            document.documentElement.requestFullscreen().then(() => {
+                // Try to lock orientation after entering fullscreen
+                if (screen.orientation && screen.orientation.lock) {
+                    screen.orientation.lock('landscape').catch(() => {});
+                }
+            }).catch(() => {
+                console.log('Fullscreen not supported or denied');
+            });
+        }
+        
+        // Method 3: Add CSS that encourages landscape (visual cue)
+        document.body.style.transform = 'rotate(90deg)';
+        document.body.style.transformOrigin = 'center center';
+        document.body.style.width = '100vh';
+        document.body.style.height = '100vw';
+        
+        // Reset the CSS rotation after 2 seconds (just a visual hint)
+        setTimeout(() => {
+            document.body.style.transform = '';
+            document.body.style.transformOrigin = '';
+            document.body.style.width = '';
+            document.body.style.height = '';
+        }, 2000);
+    }
+
+    // Check orientation on load and when orientation changes
+    handleOrientationChange();
+    window.addEventListener('orientationchange', function() {
+        setTimeout(handleOrientationChange, 100); // Small delay to ensure orientation has changed
+    });
+    window.addEventListener('resize', handleOrientationChange);
+    
     // Determine the base API URL
     const getApiBaseUrl = () => {
         // If we're on localhost, always target API on port 3000 (backend dev server)

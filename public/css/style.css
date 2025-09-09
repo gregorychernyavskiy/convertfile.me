@@ -26,23 +26,81 @@
 /* Dark Theme Variables */
 [data-theme="dark"] {
     --bg-gradient-start: #000000;
-    --bg-gradient-end: #1a1a1a;
-    --navbar-bg: #1a1a1a;
+    --bg-gradient-end: #000000;
+    --navbar-bg: #000000;
     --navbar-shadow: rgba(0, 0, 0, 0.5);
     --text-primary: #f1f5f9;
     --text-secondary: #94a3b8;
-    --container-bg: #2a2a2a;
-    --container-border: #404040;
-    --drop-area-bg: #404040;
-    --drop-area-hover: #1e40af;
-    --footer-bg: #1a1a1a;
-    --footer-border: #404040;
-    --stats-bg-start: #1a1a1a;
-    --stats-bg-end: #2a2a2a;
-    --stats-border: #404040;
-    --feature-card-bg: #2a2a2a;
-    --feature-card-border: #404040;
+    --container-bg: #1a1a1a;
+    --container-border: #444444;
+    --drop-area-bg: #1a1a1a;
+    --drop-area-hover: #2a2a2a;
+    --footer-bg: #000000;
+    --footer-border: #444444;
+    --stats-bg-start: #000000;
+    --stats-bg-end: #1a1a1a;
+    --stats-border: #444444;
+    --feature-card-bg: #1a1a1a;
+    --feature-card-border: #444444;
     --feature-card-shadow: rgba(0, 0, 0, 0.5);
+}
+
+/* Custom scrollbar styling for dark theme */
+[data-theme="dark"] ::-webkit-scrollbar {
+    width: 8px;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-track {
+    background: #000000;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb {
+    background: #444444;
+    border-radius: 4px;
+}
+
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover {
+    background: #666666;
+}
+
+/* Light theme scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
+}
+
+/* Remove all blue outlines and focus rings */
+*, *:before, *:after {
+    outline: none !important;
+    -webkit-tap-highlight-color: transparent !important;
+}
+
+button:focus,
+input:focus,
+select:focus,
+textarea:focus,
+a:focus {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+/* Fix overscroll behavior and ensure consistent backgrounds */
+html {
+    background: var(--bg-gradient-start);
+    transition: background 0.3s ease;
+    overscroll-behavior: none; /* Prevents bounce effect */
 }
 
 /* Global Styles */
@@ -60,6 +118,7 @@ body {
     color: var(--text-primary);
     padding-top: 80px; /* Push content below navbar */
     transition: background 0.3s ease, color 0.3s ease;
+    overscroll-behavior: none; /* Prevents white areas when scrolling beyond content */
 }
 
 /* Stick Navbar to the Top */
@@ -68,8 +127,7 @@ body {
     position: fixed;
     top: 0;
     left: 0;
-    right: 0;
-    padding: 15px 20px;
+    padding: 15px 30px;
     background: var(--navbar-bg);
     box-shadow: 0px 4px 12px var(--navbar-shadow);
     z-index: 1000;
@@ -77,55 +135,39 @@ body {
     justify-content: space-between;
     align-items: center;
     transition: background 0.3s ease, box-shadow 0.3s ease;
-    box-sizing: border-box;
-    max-width: 100vw;
-    overflow: visible;
-    contain: layout;
 }
 
 /* Theme Toggle Button */
 .theme-toggle {
+    position: absolute;
+    top: 35%;
+    right: 90px;
+    transform: translateY(-50%);
     background: none;
     border: 2px solid #38BDF8;
-    border-radius: 8px;
-    width: 36px;
-    height: 36px;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: all 0.3s ease;
     color: #38BDF8;
-    font-size: 14px;
-    margin-left: 10px;
-    margin-right: 0;
-    flex-shrink: 0;
-    position: relative;
-    min-width: 36px;
-    max-width: 36px;
+    font-size: 18px;
 }
 
 .theme-toggle:hover {
     background: #38BDF8;
     color: white;
-    transform: scale(1.05);
+    transform: translateY(-50%) scale(1.1);
 }
 
 .theme-toggle:active {
-    transform: scale(0.95);
-}
-
-.theme-toggle svg {
-    width: 18px;
-    height: 18px;
-    fill: currentColor;
+    transform: translateY(-50%) scale(0.95);
 }
 
 /* Navbar Logo */
-.nav-bar .logo {
-    flex-shrink: 0;
-}
-
 .nav-bar .logo a {
     font-size: 24px;
     font-weight: 700;
@@ -140,9 +182,7 @@ body {
     gap: 20px; /* Even spacing */
     align-items: center;
     margin-left: auto; /* Push links to the right */
-    margin-right: 5px; /* Add space before theme toggle */
-    flex-shrink: 1;
-    min-width: 0;
+    margin-right: 50px; /* Ensure proper spacing from the right edge */
 }
 
 /* Individual Buttons */
@@ -520,57 +560,164 @@ button:hover {
     }
 }
 
+/* Landscape orientation suggestion for mobile */
+.orientation-suggestion {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, var(--bg-gradient-start) 0%, var(--bg-gradient-end) 100%);
+    backdrop-filter: blur(10px);
+    z-index: 9999;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    text-align: center;
+    color: var(--text-primary);
+    transition: all 0.3s ease;
+    /* Prevent scrolling behind overlay */
+    overflow: hidden;
+    /* Prevent touch interactions behind overlay */
+    -webkit-overflow-scrolling: touch;
+}
+
+/* Make the overlay unescapable on mobile */
+@media screen and (max-width: 768px) and (orientation: portrait) {
+    .orientation-suggestion:not(.hidden) {
+        display: flex !important;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        z-index: 999999 !important;
+    }
+    
+    /* Disable body scrolling when overlay is shown */
+    body:has(.orientation-suggestion:not(.hidden)) {
+        overflow: hidden !important;
+        position: fixed !important;
+        width: 100% !important;
+        height: 100% !important;
+    }
+}
+
+.orientation-icon {
+    font-size: 80px;
+    margin-bottom: 30px;
+    animation: rotatePhone 3s ease-in-out infinite;
+    filter: drop-shadow(0 4px 8px rgba(56, 189, 248, 0.3));
+}
+
+.orientation-message {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin-bottom: 15px;
+    line-height: 1.4;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.orientation-submessage {
+    font-size: 16px;
+    color: var(--text-secondary);
+    margin-bottom: 30px;
+    line-height: 1.5;
+    max-width: 280px;
+}
+
+
+
+@keyframes rotatePhone {
+    0%, 100% { 
+        transform: rotate(0deg) scale(1); 
+    }
+    25% { 
+        transform: rotate(15deg) scale(1.05); 
+    }
+    50% { 
+        transform: rotate(90deg) scale(1.1); 
+    }
+    75% { 
+        transform: rotate(75deg) scale(1.05); 
+    }
+}
+
+@keyframes pulse {
+    0%, 100% { 
+        transform: scale(1); 
+        opacity: 1; 
+    }
+    50% { 
+        transform: scale(1.05); 
+        opacity: 0.8; 
+    }
+}
+
+@keyframes forcedRotate {
+    0%, 100% { 
+        transform: rotate(0deg) scale(1.2); 
+    }
+    25% { 
+        transform: rotate(30deg) scale(1.3); 
+    }
+    50% { 
+        transform: rotate(90deg) scale(1.4); 
+    }
+    75% { 
+        transform: rotate(60deg) scale(1.3); 
+    }
+}
+
+/* Show orientation suggestion only on mobile portrait - with more specific conditions */
+@media screen and (max-width: 768px) and (max-height: 1024px) and (orientation: portrait) {
+    .orientation-suggestion:not(.hidden) {
+        display: flex;
+    }
+}
+
+/* Ensure it's hidden on desktop and landscape */
+@media screen and (min-width: 769px), screen and (orientation: landscape) {
+    .orientation-suggestion {
+        display: none !important;
+    }
+}
+
 /* Responsive Design for Mobile */
 @media (max-width: 768px) {
+    /* Optimize body for mobile */
+    body {
+        padding-top: 70px; /* Reduced for mobile */
+    }
+    
     /* Make Navbar Adjust for Smaller Screens */
     .nav-bar {
-        flex-direction: row;
-        justify-content: space-between;
-        align-items: center;
-        padding: 10px 12px;
-        flex-wrap: nowrap;
+        flex-direction: column;
+        padding: 10px 20px;
     }
     
     /* Adjust theme toggle for mobile */
     .theme-toggle {
-        margin-left: 8px;
-        margin-right: 0;
-        width: 32px;
-        height: 32px;
-        flex-shrink: 0;
-        order: 3;
-        min-width: 32px;
-        max-width: 32px;
-        font-size: 12px;
+        right: 20px;
+        top: 15px;
+        transform: none;
+        position: absolute;
     }
     
-    .theme-toggle svg {
-        width: 16px;
-        height: 16px;
+    .theme-toggle:hover {
+        transform: scale(1.1);
+    }
+    
+    .theme-toggle:active {
+        transform: scale(0.95);
     }
 
     .nav-links {
-        display: none; /* Hide nav links on mobile or adjust as needed */
-    }
-}
-
-/* Extra small screens */
-@media (max-width: 480px) {
-    .nav-bar {
-        padding: 8px 8px;
-    }
-    
-    .nav-bar .logo a {
-        font-size: 18px;
-    }
-    
-    .theme-toggle {
-        width: 30px;
-        height: 30px;
-        min-width: 30px;
-        max-width: 30px;
-        font-size: 12px;
-        margin-left: 6px;
+        flex-direction: column; /* Stack links on smaller screens */
+        gap: 10px;
+        margin-top: 10px;
         margin-right: 0;
     }
 
@@ -580,10 +727,11 @@ button:hover {
         padding: 10px;
     }
 
-    /* Adjust Container for Mobile */
+    /* Optimize Container for Mobile */
     .container {
-        width: 90%;
-        padding: 30px 20px;
+        width: 95%;
+        padding: 25px 15px;
+        margin-top: 15px;
     }
     
     .welcome-title {
@@ -595,15 +743,58 @@ button:hover {
         font-size: 16px;
     }
 
-    /* Adjust Drop Area */
+    /* Optimize Drop Area for Touch */
     .drop-area {
-        padding: 20px;
+        padding: 25px 15px;
+        font-size: 16px;
+        min-height: 100px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
 
-    /* Make Buttons and Dropdown Fit on Mobile */
+    /* Make Buttons Larger for Touch */
     .convert-options select,
     .convert-options button {
         width: 100%;
+        padding: 16px 20px;
+        font-size: 16px;
+        margin-top: 12px;
+    }
+    
+    /* Improve file item display on mobile */
+    .file-item {
+        padding: 12px 8px;
+        font-size: 14px;
+        flex-wrap: wrap;
+        gap: 8px;
+    }
+    
+    .file-item button {
+        margin-top: 8px;
+        width: 100%;
+        padding: 10px;
+    }
+    
+    /* Make page title more mobile-friendly */
+    h1 {
+        font-size: 28px;
+        margin-bottom: 15px;
+        letter-spacing: 1px;
+    }
+    
+    /* Better spacing for mobile buttons */
+    #selectionButtons a button {
+        padding: 18px 25px;
+        font-size: 16px;
+        margin: 8px;
+        min-width: 140px;
+        height: 60px;
+    }
+    
+    .selection-buttons {
+        gap: 15px;
+        margin-top: 15px;
     }
 }
 

@@ -6,7 +6,7 @@ const sharp = require("sharp");
 const { PDFDocument } = require("pdf-lib");
 
 // Load environment variables
-require('dotenv').config();
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 
 // Database functions with error handling
 let loadStats, trackEvent, logUserActivity, getUserActivityStats, getRecentUserActivities, extractClientInfo;
@@ -126,30 +126,6 @@ app.get('/api/stats', async (req, res) => {
     }
 });
 
-// API endpoint to get detailed user activity stats
-app.get('/api/activity-stats', async (req, res) => {
-    try {
-        const days = parseInt(req.query.days) || 7;
-        const activityStats = await getUserActivityStats(days);
-        res.json(activityStats);
-    } catch (error) {
-        console.error('Error fetching activity stats:', error);
-        res.status(500).json({ error: 'Failed to fetch activity stats' });
-    }
-});
-
-// API endpoint to get recent user activities
-app.get('/api/recent-activities', async (req, res) => {
-    try {
-        const limit = parseInt(req.query.limit) || 50;
-        const recentActivities = await getRecentUserActivities(limit);
-        res.json(recentActivities);
-    } catch (error) {
-        console.error('Error fetching recent activities:', error);
-        res.status(500).json({ error: 'Failed to fetch recent activities' });
-    }
-});
-
 // Middleware to track page visits with detailed logging
 app.use(async (req, res, next) => {
     // Track visits to main pages and API endpoints
@@ -157,7 +133,6 @@ app.use(async (req, res, next) => {
                        req.path === '/convert' || 
                        req.path === '/combine' || 
                        req.path === '/pdf-to-word' ||
-                       req.path === '/admin' ||
                        req.path.endsWith('.html');
     
     if (shouldTrack) {
@@ -902,29 +877,24 @@ app.post("/pdf-to-word", upload.array("files"), async (req, res) => {
 });
 
 // Serve static files (CSS, JS, images)
-app.use(express.static(path.join(__dirname, "../public")));
+app.use(express.static(path.join(__dirname, "..", "public")));
 
 // Main HTML for root
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '../public', 'index.html'));
+    res.sendFile(path.join(__dirname, '..', 'public', 'index.html'));
 });
 
 // HTML page routes
 app.get('/convert', (req, res) => {
-    res.sendFile(path.join(__dirname, '../public', 'convert.html'));
+    res.sendFile(path.join(__dirname, '..', 'public', 'convert.html'));
 });
 
 app.get('/combine', (req, res) => {
-    res.sendFile(path.join(__dirname, '../public', 'combine.html'));
+    res.sendFile(path.join(__dirname, '..', 'public', 'combine.html'));
 });
 
 app.get('/pdf-to-word', (req, res) => {
-    res.sendFile(path.join(__dirname, '../public', 'pdf-to-word.html'));
-});
-
-// Admin dashboard
-app.get('/admin', (req, res) => {
-    res.sendFile(path.join(__dirname, '../public', 'admin.html'));
+    res.sendFile(path.join(__dirname, '..', 'public', 'pdf-to-word.html'));
 });
 
 // 404 handler
