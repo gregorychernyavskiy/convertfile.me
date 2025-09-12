@@ -589,15 +589,24 @@ app.post("/combine", upload.array("files"), async (req, res) => {
         // Add uploaded files to cleanup list
         cleanupFiles.push(...req.files.map(f => f.path));
         
+        // Check total file size to prevent issues with large files
+        const totalSize = req.files.reduce((sum, file) => sum + file.size, 0);
+        const maxTotalSize = 100 * 1024 * 1024; // 100MB total limit for serverless
+        
+        if (totalSize > maxTotalSize) {
+            throw new Error(`Total file size (${(totalSize / 1024 / 1024).toFixed(1)}MB) exceeds the limit of 100MB. Please reduce the number or size of files.`);
+        }
+        
         // Create a new PDF document
         const pdfDoc = await PDFDocument.create();
+        let processedFiles = 0;
         
         // Process each uploaded file
         for (let i = 0; i < req.files.length; i++) {
             const file = req.files[i];
             const fileExt = path.extname(file.originalname).toLowerCase();
             
-            console.log(`Processing file ${i + 1}/${req.files.length}: ${file.originalname}`);
+            console.log(`Processing file ${i + 1}/${req.files.length}: ${file.originalname} (${(file.size / 1024).toFixed(1)}KB)`);
             
             try {
                 if (fileExt === '.pdf') {
@@ -606,11 +615,13 @@ app.post("/combine", upload.array("files"), async (req, res) => {
                     const existingPdf = await PDFDocument.load(existingPdfBytes);
                     const pages = await pdfDoc.copyPages(existingPdf, existingPdf.getPageIndices());
                     pages.forEach((page) => pdfDoc.addPage(page));
-                } else if (['.jpg', '.jpeg', '.png', '.tiff', '.gif', '.bmp', '.webp', '.avif'].includes(fileExt)) {
-                    // If it's an image, convert and add it
+                    processedFiles++;
+                } else if (['.jpg', '.jpeg', '.png', '.tiff', '.gif', '.bmp', '.webp', '.avif', '.heic', '.heif'].includes(fileExt)) {
+                    // If it's an image (including HEIC), convert and add it
                     let imageBuffer;
                     
                     if (fileExt === '.heic' || fileExt === '.heif') {
+                        console.log(`Converting HEIC file: ${file.originalname}`);
                         const heicConvert = require('heic-convert');
                         const heicFileBuffer = fs.readFileSync(file.path);
                         imageBuffer = await heicConvert({
@@ -624,25 +635,41 @@ app.post("/combine", upload.array("files"), async (req, res) => {
                     }
                     
                     const image = await pdfDoc.embedPng(imageBuffer);
-                    const page = pdfDoc.addPage([image.width, image.height]);
+                    
+                    // Scale image to fit standard page size if it's too large
+                    const maxWidth = 595; // A4 width in points
+                    const maxHeight = 842; // A4 height in points
+                    let { width, height } = image;
+                    
+                    if (width > maxWidth || height > maxHeight) {
+                        const widthRatio = maxWidth / width;
+                        const heightRatio = maxHeight / height;
+                        const ratio = Math.min(widthRatio, heightRatio);
+                        width = width * ratio;
+                        height = height * ratio;
+                    }
+                    
+                    const page = pdfDoc.addPage([width, height]);
                     page.drawImage(image, {
                         x: 0,
                         y: 0,
-                        width: image.width,
-                        height: image.height,
+                        width: width,
+                        height: height,
                     });
+                    processedFiles++;
                 } else {
-                    console.warn(`Skipping unsupported file type: ${file.originalname}`);
+                    console.warn(`Skipping unsupported file type: ${file.originalname} (${fileExt})`);
                 }
             } catch (fileError) {
                 console.error(`Error processing file ${file.originalname}:`, fileError);
-                // Continue with other files
+                // Continue with other files but log the error
             }
         }
         
         // Check if we have any pages
-        if (pdfDoc.getPageCount() === 0) {
-            throw new Error('No valid files to combine. Please upload PDF or image files.');
+        if (pdfDoc.getPageCount() === 0 || processedFiles === 0) {
+            const supportedTypes = 'PDF, JPG, JPEG, PNG, TIFF, HEIC, HEIF, GIF, BMP, WEBP, AVIF';
+            throw new Error(`No valid files to combine. Please upload supported file types: ${supportedTypes}`);
         }
         
         // Save the combined PDF
@@ -674,7 +701,7 @@ app.post("/combine", upload.array("files"), async (req, res) => {
             });
         });
 
-        console.log(`Combine completed: ${req.files.length} files combined to PDF from ${clientInfo.ip}`);
+        console.log(`Combine completed: ${processedFiles}/${req.files.length} files successfully combined to PDF (${(totalSize / 1024 / 1024).toFixed(1)}MB total) from ${clientInfo.ip}`);
 
     } catch (error) {
         console.error("Combine error:", error);
