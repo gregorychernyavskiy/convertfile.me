@@ -112,7 +112,7 @@ Required environment variables for production:
 ## File Size Limits
 
 - Maximum file size: 50MB per file
-- Maximum files per request: 5 files
+- Maximum files per request: 10 files
 
 ## Troubleshooting
 

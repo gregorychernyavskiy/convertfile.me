@@ -68,7 +68,7 @@ const upload = multer({
     dest: '/tmp',
     limits: {
         fileSize: 50 * 1024 * 1024, // 50MB limit
-        files: 5 // Max 5 files
+        files: 10 // Max 10 files
     }
 });
 
