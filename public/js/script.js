@@ -227,92 +227,52 @@ document.addEventListener("DOMContentLoaded", function () {
         fileList.innerHTML = "";
         if (selectedFiles.size === 0) return;
         
-        // If on convert page, show numbered list for file selection
-        if (isConvertPage) {
-            let selectedFileName = window.selectedFileName || Array.from(selectedFiles.keys())[0];
-            Array.from(selectedFiles.values()).forEach((file, index) => {
-                let fileItem = document.createElement("div");
-                fileItem.className = "file-item";
-                fileItem.style.display = "flex";
-                fileItem.style.alignItems = "center";
-                fileItem.style.gap = "12px";
-                fileItem.style.cursor = "pointer";
-                fileItem.style.padding = "8px";
-                fileItem.style.borderRadius = "6px";
-                fileItem.style.transition = "background-color 0.2s";
-                
-                // No background styling - clean look
-                fileItem.style.backgroundColor = "transparent";
-                
-                // Number instead of radio button
-                let numberSpan = document.createElement("span");
-                numberSpan.textContent = (index + 1).toString();
-                numberSpan.style.backgroundColor = file.name === selectedFileName ? "#38BDF8" : "#94A3B8";
-                numberSpan.style.color = "white";
-                numberSpan.style.borderRadius = "50%";
-                numberSpan.style.width = "24px";
-                numberSpan.style.height = "24px";
-                numberSpan.style.display = "flex";
-                numberSpan.style.alignItems = "center";
-                numberSpan.style.justifyContent = "center";
-                numberSpan.style.fontSize = "14px";
-                numberSpan.style.fontWeight = "bold";
-                numberSpan.style.minWidth = "24px";
-                
-                // Make the entire item clickable for selection
-                fileItem.onclick = function () {
-                    window.selectedFileName = file.name;
-                    renderFileList(); // Re-render to update styling
-                };
-                
-                fileItem.appendChild(numberSpan);
-                
-                // File name and size
-                let fileLabel = document.createElement("span");
-                fileLabel.textContent = `${formatFileName(file.name)} (${(file.size / 1024).toFixed(2)} KB)`;
-                fileLabel.style.flex = "1";
-                fileItem.appendChild(fileLabel);
-                
-                // Remove button
-                let removeBtn = document.createElement("button");
-                removeBtn.textContent = "Remove";
-                removeBtn.style.marginLeft = "auto";
-                removeBtn.onclick = function (e) {
-                    e.stopPropagation(); // Prevent triggering the file selection
-                    selectedFiles.delete(file.name);
-                    if (window.selectedFileName === file.name) window.selectedFileName = null;
-                    renderFileList();
-                    updateFileCount();
-                };
-                fileItem.appendChild(removeBtn);
-                fileList.appendChild(fileItem);
-            });
-        } else if (isCombinePage) {
-            // On combine page, just show list with remove buttons (no radio buttons)
-            Array.from(selectedFiles.values()).forEach(file => {
-                let fileItem = document.createElement("div");
-                fileItem.className = "file-item";
-                fileItem.style.display = "flex";
-                fileItem.style.alignItems = "center";
-                fileItem.style.gap = "12px";
-                
-                // File name and size
-                let fileLabel = document.createElement("span");
-                fileLabel.textContent = `${formatFileName(file.name)} (${(file.size / 1024).toFixed(2)} KB)`;
-                fileItem.appendChild(fileLabel);
-                
-                // Remove button
-                let removeBtn = document.createElement("button");
-                removeBtn.textContent = "Remove";
-                removeBtn.onclick = function () {
-                    selectedFiles.delete(file.name);
-                    renderFileList();
-                    updateFileCount();
-                };
-                fileItem.appendChild(removeBtn);
-                fileList.appendChild(fileItem);
-            });
-        }
+        // Show all files with remove buttons (no more selection needed)
+        Array.from(selectedFiles.values()).forEach((file, index) => {
+            let fileItem = document.createElement("div");
+            fileItem.className = "file-item";
+            fileItem.style.display = "flex";
+            fileItem.style.alignItems = "center";
+            fileItem.style.gap = "12px";
+            fileItem.style.padding = "8px";
+            fileItem.style.borderRadius = "6px";
+            fileItem.style.backgroundColor = "transparent";
+            
+            // Number indicator
+            let numberSpan = document.createElement("span");
+            numberSpan.textContent = (index + 1).toString();
+            numberSpan.style.backgroundColor = "#38BDF8";
+            numberSpan.style.color = "white";
+            numberSpan.style.borderRadius = "50%";
+            numberSpan.style.width = "24px";
+            numberSpan.style.height = "24px";
+            numberSpan.style.display = "flex";
+            numberSpan.style.alignItems = "center";
+            numberSpan.style.justifyContent = "center";
+            numberSpan.style.fontSize = "14px";
+            numberSpan.style.fontWeight = "bold";
+            numberSpan.style.minWidth = "24px";
+            
+            fileItem.appendChild(numberSpan);
+            
+            // File name and size
+            let fileLabel = document.createElement("span");
+            fileLabel.textContent = `${formatFileName(file.name)} (${(file.size / 1024).toFixed(2)} KB)`;
+            fileLabel.style.flex = "1";
+            fileItem.appendChild(fileLabel);
+            
+            // Remove button
+            let removeBtn = document.createElement("button");
+            removeBtn.textContent = "Remove";
+            removeBtn.style.marginLeft = "auto";
+            removeBtn.onclick = function () {
+                selectedFiles.delete(file.name);
+                renderFileList();
+                updateFileCount();
+            };
+            fileItem.appendChild(removeBtn);
+            fileList.appendChild(fileItem);
+        });
     }
 
     // Only add event listeners if elements exist on this page
@@ -359,22 +319,16 @@ document.addEventListener("DOMContentLoaded", function () {
         const format = formatSelect.value;
         let formData = new FormData();
         
-        // Only send the selected file
-        const selectedName = window.selectedFileName || Array.from(selectedFiles.keys())[0];
-        const selectedFile = selectedFiles.get(selectedName);
-        
-        if (!selectedFile) {
-            alert("Please select a file to convert.");
-            return;
-        }
-        
-        formData.append("files", selectedFile);
+        // Send ALL selected files for conversion
+        selectedFiles.forEach(file => {
+            formData.append("files", file);
+        });
         formData.append("output_format", format);
         
         // Show loading state
         const convertBtn = document.querySelector('button[type="submit"]');
         if (convertBtn) {
-            convertBtn.textContent = "Converting...";
+            convertBtn.textContent = selectedFiles.size === 1 ? "Converting..." : "Converting & Zipping...";
             convertBtn.disabled = true;
         }
         
@@ -392,16 +346,33 @@ document.addEventListener("DOMContentLoaded", function () {
         })
         .then(blob => {
             const url = window.URL.createObjectURL(blob);
-            const originalName = selectedFile.name;
-            const nameWithoutExt = originalName.substring(0, originalName.lastIndexOf('.')) || originalName;
-            const downloadName = `${nameWithoutExt}.${format}`;
+            let downloadName;
+            
+            if (selectedFiles.size === 1) {
+                // Single file - use original name with new extension
+                const originalFile = Array.from(selectedFiles.values())[0];
+                const nameWithoutExt = originalFile.name.substring(0, originalFile.name.lastIndexOf('.')) || originalFile.name;
+                downloadName = `${nameWithoutExt}.${format}`;
+            } else {
+                // Multiple files - ZIP file
+                const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+                downloadName = `converted_files_${timestamp}.zip`;
+            }
             
             if (downloadLink) {
                 downloadLink.href = url;
                 downloadLink.download = downloadName;
                 downloadLink.style.display = "block";
                 downloadLink.textContent = `Download ${downloadName}`;
+                
+                // Auto-download the file
+                downloadLink.click();
             }
+            
+            // Clear selected files and reset the file list after successful conversion
+            selectedFiles.clear();
+            if (fileList) fileList.innerHTML = "";
+            updateFileCount();
             
             // Reset button
             if (convertBtn) {
