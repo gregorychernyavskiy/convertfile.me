@@ -413,6 +413,9 @@ app.post("/convert", upload.array("files"), async (req, res) => {
                 sharpInstance = sharp(convertedBuffer);
             }
             
+            // Apply auto-rotation for all images to handle EXIF orientation
+            sharpInstance = sharpInstance.rotate();
+            
             // Apply format-specific conversion
             switch (format) {
                 case 'jpg':
@@ -566,6 +569,7 @@ app.post("/combine", upload.array("files"), async (req, res) => {
                         });
                     } else {
                         imageBuffer = await sharp(file.path)
+                            .rotate() // Auto-orient based on EXIF data
                             .png()
                             .toBuffer();
                     }

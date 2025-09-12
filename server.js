@@ -511,6 +511,7 @@ async function getCachedOrProcessImage(file, fileExt) {
             
             if (['.jpg', '.jpeg'].includes(fileExt)) {
                 const imageBuffer = await sharpInstance
+                    .rotate() // Auto-orient based on EXIF data
                     .jpeg({ quality: 85, progressive: true })
                     .toBuffer();
                 result = {
@@ -519,6 +520,7 @@ async function getCachedOrProcessImage(file, fileExt) {
                 };
             } else {
                 const imageBuffer = await sharpInstance
+                    .rotate() // Auto-orient based on EXIF data
                     .png({ compressionLevel: 6, adaptiveFiltering: false })
                     .toBuffer();
                 result = {
@@ -558,6 +560,7 @@ async function convertSingleFile(file, inputExt, format, outputPath) {
                 });
             } else {
                 imageBuffer = await sharp(file.path)
+                    .rotate() // Auto-orient based on EXIF data
                     .png()
                     .toBuffer();
             }
@@ -590,6 +593,9 @@ async function convertSingleFile(file, inputExt, format, outputPath) {
             });
             sharpInstance = sharp(convertedBuffer);
         }
+        
+        // Apply auto-rotation for all images to handle EXIF orientation
+        sharpInstance = sharpInstance.rotate();
         
         // Apply format-specific conversion
         switch (format) {
