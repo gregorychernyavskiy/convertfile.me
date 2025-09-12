@@ -4,6 +4,10 @@ const fs = require("fs");
 const path = require("path");
 const sharp = require("sharp");
 const { PDFDocument } = require("pdf-lib");
+const crypto = require('crypto');
+
+// Simple in-memory cache for processed files (cleared on server restart)
+const fileProcessingCache = new Map();
 
 // Load environment variables
 require('dotenv').config({ path: path.join(__dirname, '.env') });
@@ -469,6 +473,73 @@ app.post("/convert", upload.array("files"), async (req, res) => {
     }
 });
 
+// Helper function to generate file hash for caching
+function generateFileHash(filePath, fileSize) {
+    const hash = crypto.createHash('md5');
+    hash.update(filePath + fileSize.toString());
+    return hash.digest('hex');
+}
+
+// Helper function to get cached processed image or process and cache it
+async function getCachedOrProcessImage(file, fileExt) {
+    const fileHash = generateFileHash(file.path, file.size);
+    
+    // Check cache first
+    if (fileProcessingCache.has(fileHash)) {
+        console.log(`Using cached result for ${file.originalname}`);
+        return fileProcessingCache.get(fileHash);
+    }
+    
+    let result;
+    try {
+        if (fileExt === '.heic' || fileExt === '.heif') {
+            console.log(`Converting HEIC file: ${file.originalname}`);
+            const heicConvert = require('heic-convert');
+            const heicFileBuffer = fs.readFileSync(file.path);
+            const imageBuffer = await heicConvert({
+                buffer: heicFileBuffer,
+                format: 'JPEG',
+                quality: 0.8
+            });
+            result = {
+                buffer: imageBuffer,
+                isJpeg: true
+            };
+            console.log(`Successfully converted HEIC file: ${file.originalname}`);
+        } else {
+            const sharpInstance = sharp(file.path);
+            
+            if (['.jpg', '.jpeg'].includes(fileExt)) {
+                const imageBuffer = await sharpInstance
+                    .jpeg({ quality: 85, progressive: true })
+                    .toBuffer();
+                result = {
+                    buffer: imageBuffer,
+                    isJpeg: true
+                };
+            } else {
+                const imageBuffer = await sharpInstance
+                    .png({ compressionLevel: 6, adaptiveFiltering: false })
+                    .toBuffer();
+                result = {
+                    buffer: imageBuffer,
+                    isJpeg: false
+                };
+            }
+        }
+        
+        // Cache the result (with size limit to prevent memory issues)
+        if (fileProcessingCache.size < 100) { // Limit cache to 100 items
+            fileProcessingCache.set(fileHash, result);
+        }
+        
+        return result;
+    } catch (error) {
+        console.error(`Error processing image file ${file.originalname}:`, error);
+        throw error; // Re-throw to be handled by caller
+    }
+}
+
 // Helper function to convert a single file
 async function convertSingleFile(file, inputExt, format, outputPath) {
     // Handle different conversion types
@@ -601,40 +672,73 @@ app.post("/combine", upload.array("files"), async (req, res) => {
         const pdfDoc = await PDFDocument.create();
         let processedFiles = 0;
         
-        // Process each uploaded file
-        for (let i = 0; i < req.files.length; i++) {
-            const file = req.files[i];
+        // Helper function to process individual files
+        const processFile = async (file, index) => {
             const fileExt = path.extname(file.originalname).toLowerCase();
             
-            console.log(`Processing file ${i + 1}/${req.files.length}: ${file.originalname} (${(file.size / 1024).toFixed(1)}KB)`);
+            console.log(`Processing file ${index + 1}/${req.files.length}: ${file.originalname} (${(file.size / 1024).toFixed(1)}KB)`);
             
             try {
                 if (fileExt === '.pdf') {
-                    // If it's a PDF, merge it
+                    // For PDFs, return the loaded document and pages for later merging
                     const existingPdfBytes = fs.readFileSync(file.path);
                     const existingPdf = await PDFDocument.load(existingPdfBytes);
-                    const pages = await pdfDoc.copyPages(existingPdf, existingPdf.getPageIndices());
-                    pages.forEach((page) => pdfDoc.addPage(page));
-                    processedFiles++;
+                    return {
+                        type: 'pdf',
+                        document: existingPdf,
+                        pageIndices: existingPdf.getPageIndices(),
+                        index
+                    };
                 } else if (['.jpg', '.jpeg', '.png', '.tiff', '.gif', '.bmp', '.webp', '.avif', '.heic', '.heif'].includes(fileExt)) {
-                    // If it's an image (including HEIC), convert and add it
-                    let imageBuffer;
+                    // For images, use cached processing for better performance
+                    const imageResult = await getCachedOrProcessImage(file, fileExt);
                     
-                    if (fileExt === '.heic' || fileExt === '.heif') {
-                        console.log(`Converting HEIC file: ${file.originalname}`);
-                        const heicConvert = require('heic-convert');
-                        const heicFileBuffer = fs.readFileSync(file.path);
-                        imageBuffer = await heicConvert({
-                            buffer: heicFileBuffer,
-                            format: 'PNG'
-                        });
-                    } else {
-                        imageBuffer = await sharp(file.path)
-                            .png()
-                            .toBuffer();
-                    }
-                    
-                    const image = await pdfDoc.embedPng(imageBuffer);
+                    return {
+                        type: 'image',
+                        buffer: imageResult.buffer,
+                        isJpeg: imageResult.isJpeg,
+                        index
+                    };
+                } else {
+                    console.warn(`Skipping unsupported file type: ${file.originalname} (${fileExt})`);
+                    return null;
+                }
+            } catch (error) {
+                console.error(`Error processing file ${file.originalname}:`, error);
+                return null; // Return null for failed files, but don't stop processing
+            }
+        };
+        
+        // Process files in parallel batches to improve performance
+        const batchSize = 5; // Process 5 files at a time to balance speed and memory usage
+        const allResults = [];
+        
+        for (let i = 0; i < req.files.length; i += batchSize) {
+            const batch = req.files.slice(i, i + batchSize);
+            const batchPromises = batch.map((file, batchIndex) => 
+                processFile(file, i + batchIndex).catch(error => {
+                    console.error(`Error processing file ${file.originalname}:`, error);
+                    return null; // Return null for failed files
+                })
+            );
+            
+            const batchResults = await Promise.all(batchPromises);
+            allResults.push(...batchResults.filter(result => result !== null));
+        }
+        
+        // Sort results by original index to maintain file order
+        allResults.sort((a, b) => a.index - b.index);
+        
+        // Now merge all processed content into the PDF document
+        for (const result of allResults) {
+            try {
+                if (result.type === 'pdf') {
+                    const pages = await pdfDoc.copyPages(result.document, result.pageIndices);
+                    pages.forEach((page) => pdfDoc.addPage(page));
+                } else if (result.type === 'image') {
+                    const image = result.isJpeg 
+                        ? await pdfDoc.embedJpg(result.buffer)
+                        : await pdfDoc.embedPng(result.buffer);
                     
                     // Scale image to fit standard page size if it's too large
                     const maxWidth = 595; // A4 width in points
@@ -656,27 +760,50 @@ app.post("/combine", upload.array("files"), async (req, res) => {
                         width: width,
                         height: height,
                     });
-                    processedFiles++;
-                } else {
-                    console.warn(`Skipping unsupported file type: ${file.originalname} (${fileExt})`);
                 }
-            } catch (fileError) {
-                console.error(`Error processing file ${file.originalname}:`, fileError);
-                // Continue with other files but log the error
+                processedFiles++;
+            } catch (mergeError) {
+                console.error(`Error merging file at index ${result.index}:`, mergeError);
             }
         }
         
         // Check if we have any pages
         if (pdfDoc.getPageCount() === 0 || processedFiles === 0) {
-            const supportedTypes = 'PDF, JPG, JPEG, PNG, TIFF, HEIC, HEIF, GIF, BMP, WEBP, AVIF';
-            throw new Error(`No valid files to combine. Please upload supported file types: ${supportedTypes}`);
+            // Provide more detailed error information
+            const totalFiles = req.files.length;
+            const successfulFiles = allResults.length;
+            const failedFiles = totalFiles - successfulFiles;
+            
+            let errorMessage = `No valid files could be processed. `;
+            if (failedFiles > 0) {
+                errorMessage += `${failedFiles} out of ${totalFiles} files failed to process. `;
+            }
+            errorMessage += `Please ensure you upload supported file types: PDF, JPG, JPEG, PNG, TIFF, HEIC, HEIF, GIF, BMP, WEBP, AVIF. `;
+            
+            if (failedFiles > 0) {
+                errorMessage += `Check the console logs for specific file processing errors.`;
+            }
+            
+            throw new Error(errorMessage);
         }
         
-        // Save the combined PDF
-        const pdfBytes = await pdfDoc.save();
+        // Save the combined PDF with optimized settings
+        const pdfBytes = await pdfDoc.save({
+            useObjectStreams: false, // Faster for smaller files
+            addDefaultPage: false,
+            objectsPerTick: 50 // Process more objects per tick for better performance
+        });
         const outputPath = path.join('/tmp', `combined_${Date.now()}.pdf`);
         cleanupFiles.push(outputPath);
-        fs.writeFileSync(outputPath, pdfBytes);
+        
+        // Use streaming write for better memory efficiency
+        await new Promise((resolve, reject) => {
+            const writeStream = fs.createWriteStream(outputPath);
+            writeStream.on('error', reject);
+            writeStream.on('finish', resolve);
+            writeStream.write(Buffer.from(pdfBytes));
+            writeStream.end();
+        });
         
         // Send the combined PDF
         const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
