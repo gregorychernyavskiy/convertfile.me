@@ -39,6 +39,7 @@
     "pdf-lib": "^1.17.1",
     "pdf-parse": "^1.1.1",
     "pdf-poppler": "^0.2.1",
+    "pdf2pic": "^2.1.4",
     "pdfjs-dist": "^5.4.149",
     "pizzip": "^3.2.0",
     "puppeteer-core": "^24.20.0",

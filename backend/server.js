@@ -1130,15 +1130,61 @@ app.post("/pdf-to-images", upload.array("files"), async (req, res) => {
         // Process each PDF file
         for (const file of pdfFiles) {
             try {
-                // Use system-installed pdftocairo directly
-                const { spawn } = require('child_process');
+                // Check if we're in Vercel environment
+                const isVercel = process.env.VERCEL || process.env.NOW_REGION;
                 
-                // Create output directory for this file
-                const outputDir = path.join('/tmp', `pdf_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
-                fs.mkdirSync(outputDir, { recursive: true });
-                cleanupFiles.push(outputDir);
-                
-                try {
+                if (isVercel) {
+                    // For Vercel, use pdf2pic library
+                    const pdf2pic = require('pdf2pic');
+                    
+                    const convert = pdf2pic.fromPath(file.path, {
+                        density: 100,
+                        saveFilename: "page",
+                        savePath: "/tmp",
+                        format: format === 'jpg' ? 'jpeg' : format,
+                        width: 1024,
+                        height: 1024
+                    });
+                    
+                    try {
+                        const results = await convert.bulk(-1); // Convert all pages
+                        
+                        if (results && results.length > 0) {
+                            const originalName = path.parse(file.originalname).name;
+                            
+                            results.forEach((result, pageIndex) => {
+                                if (result.buffer) {
+                                    const fileName = results.length === 1 && pdfFiles.length === 1
+                                        ? `${originalName}.${format}`
+                                        : `${originalName}_page_${pageIndex + 1}.${format}`;
+                                    
+                                    archive.append(result.buffer, { name: fileName });
+                                    
+                                    // If this is the only image, save it for direct download
+                                    if (results.length === 1 && pdfFiles.length === 1) {
+                                        singleImageBuffer = result.buffer;
+                                        singleImageName = fileName;
+                                    }
+                                    
+                                    totalImages++;
+                                }
+                            });
+                        } else {
+                            throw new Error('No images generated from PDF using pdf2pic');
+                        }
+                    } catch (pdf2picError) {
+                        console.error('pdf2pic failed:', pdf2picError.message);
+                        throw pdf2picError;
+                    }
+                } else {
+                    // For local development, use system pdftocairo
+                    const { spawn } = require('child_process');
+                    
+                    // Create output directory for this file
+                    const outputDir = path.join('/tmp', `pdf_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
+                    fs.mkdirSync(outputDir, { recursive: true });
+                    cleanupFiles.push(outputDir);
+                    
                     // Use system pdftocairo with proper PATH
                     const outputBaseName = path.join(outputDir, 'page');
                     const pdftocairoArgs = [
@@ -1205,35 +1251,29 @@ app.post("/pdf-to-images", upload.array("files"), async (req, res) => {
                     } else {
                         throw new Error('No images generated from PDF');
                     }
-                } catch (popplerError) {
-                    console.error('PDF-Poppler failed, using text extraction fallback:', popplerError.message);
-                    
-                    // Fallback: Extract text and create a simple text image
-                    const pdfParse = require('pdf-parse');
-                    const pdfBuffer = fs.readFileSync(file.path);
-                    const pdfData = await pdfParse(pdfBuffer);
-                    
-                    // Create a simple text representation
-                    const originalName = path.parse(file.originalname).name;
-                    const textContent = `PDF Text Content from: ${file.originalname}\n\n${pdfData.text}`;
-                    
-                    // Create a simple text file as fallback
-                    const textFileName = `${originalName}_text_content.txt`;
-                    archive.append(textContent, { name: textFileName });
-                    
-                    // Also create an error notice
-                    const errorNotice = `PDF to Images conversion requires system dependencies.\n\nTo fix this issue:\n1. Install Cairo: brew install cairo\n2. Install Poppler: brew install poppler\n\nText content has been extracted instead.`;
-                    archive.append(errorNotice, { name: `CONVERSION_INFO_${originalName}.txt` });
-                    
-                    totalImages++;
                 }
                 
-            } catch (fileError) {
-                console.error(`Error converting ${file.originalname}:`, fileError);
-                // Add error file to ZIP
-                archive.append(`Error converting ${file.originalname}: ${fileError.message}\n\nTo fix PDF to Images conversion:\n1. Install Cairo: brew install cairo\n2. Install Poppler: brew install poppler`, { 
-                    name: `ERROR_${file.originalname}.txt` 
-                });
+            } catch (conversionError) {
+                console.error('PDF conversion failed, using text extraction fallback:', conversionError.message);
+                
+                // Fallback: Extract text and create a simple text image
+                const pdfParse = require('pdf-parse');
+                const pdfBuffer = fs.readFileSync(file.path);
+                const pdfData = await pdfParse(pdfBuffer);
+                
+                // Create a simple text representation
+                const originalName = path.parse(file.originalname).name;
+                const textContent = `PDF Text Content from: ${file.originalname}\n\n${pdfData.text}`;
+                
+                // Create a simple text file as fallback
+                const textFileName = `${originalName}_text_content.txt`;
+                archive.append(textContent, { name: textFileName });
+                
+                // Also create an error notice
+                const errorNotice = `PDF to Images conversion failed.\n\nError: ${conversionError.message}\n\nText content has been extracted instead.`;
+                archive.append(errorNotice, { name: `CONVERSION_INFO_${originalName}.txt` });
+                
+                totalImages++;
             }
         }
         

@@ -5,7 +5,8 @@
       "src": "api/index.js",
       "use": "@vercel/node",
       "config": {
-        "maxDuration": 30
+        "maxDuration": 30,
+        "includeFiles": ["node_modules/pdf-poppler/dist/**"]
       }
     },
     {
@@ -31,6 +32,10 @@
       "dest": "/api/index.js"
     },
     {
+      "src": "/pdf-to-images",
+      "dest": "/api/index.js"
+    },
+    {
       "src": "/css/(.*)",
       "dest": "/public/css/$1"
     },
@@ -41,6 +46,10 @@
     {
       "src": "/(.*\\.(css|js|html|png|jpg|jpeg|gif|svg|ico|woff|woff2))",
       "dest": "/public/$1"
+    },
+    {
+      "src": "/favicon/(.*)",
+      "dest": "/public/favicon/$1"
     },
     {
       "src": "/public/(.*)",
@@ -57,5 +66,10 @@
   ],
   "env": {
     "NODE_ENV": "production"
+  },
+  "functions": {
+    "api/index.js": {
+      "maxDuration": 30
+    }
   }
 }
