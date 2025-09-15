@@ -822,15 +822,7 @@ app.post("/pdf-to-word", upload.array("files"), async (req, res) => {
                     archive.append(`Error converting ${file.originalname}: ${fileError.message}`, { 
                         name: `ERROR_${file.originalname}.txt` 
                     });
-                # Install Homebrew first (if not installed)
-                /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-                
-                # Then install dependencies
-                brew install cairo poppler                # Install Homebrew first (if not installed)
-                /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-                
-                # Then install dependencies
-                brew install cairo poppler                }
+                }
             }
             
             archive.finalize();
