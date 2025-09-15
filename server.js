@@ -291,10 +291,10 @@ app.get('/api/test-tracking', async (req, res) => {
 });
 
 // Supported formats
-const supportedFormats = ["jpg", "png", "tiff", "pdf", "heic", "gif", "bmp", "webp", "avif", "svg"];
+const supportedFormats = ["jpg", "png", "tiff", "bmp", "webp", "avif", "svg"];
 const supportedMimetypes = [
     "image/jpg", "image/jpeg", "image/png", "image/tiff", "image/heic", "image/heif",
-    "image/gif", "image/bmp", "image/webp", "image/avif", "image/svg+xml"
+    "image/bmp", "image/webp", "image/avif", "image/svg+xml"
 ];
 
 // File conversion endpoint
@@ -550,43 +550,8 @@ async function getCachedOrProcessImage(file, fileExt) {
 
 // Helper function to convert a single file
 async function convertSingleFile(file, inputExt, format, outputPath) {
-    // Handle different conversion types
-    if (format === 'pdf') {
-        // Convert images to PDF
-        if (['jpg', 'jpeg', 'png', 'tiff', 'heic', 'gif', 'bmp', 'webp', 'avif'].includes(inputExt)) {
-            const pdfDoc = await PDFDocument.create();
-            
-            let imageBuffer;
-            if (inputExt === 'heic' || inputExt === 'heif') {
-                const heicConvert = require('heic-convert');
-                const heicBuffer = fs.readFileSync(file.path);
-                imageBuffer = await heicConvert({
-                    buffer: heicBuffer,
-                    format: 'PNG'
-                });
-            } else {
-                imageBuffer = await sharp(file.path)
-                    .rotate() // Auto-orient based on EXIF data
-                    .png()
-                    .toBuffer();
-            }
-            
-            const image = await pdfDoc.embedPng(imageBuffer);
-            const page = pdfDoc.addPage([image.width, image.height]);
-            page.drawImage(image, {
-                x: 0,
-                y: 0,
-                width: image.width,
-                height: image.height,
-            });
-            
-            const pdfBytes = await pdfDoc.save();
-            fs.writeFileSync(outputPath, pdfBytes);
-        } else {
-            throw new Error(`Cannot convert ${inputExt} to PDF`);
-        }
-    } else if (['jpg', 'jpeg', 'png', 'tiff', 'gif', 'bmp', 'webp', 'avif'].includes(format)) {
-        // Convert to image formats using Sharp
+    // Handle image format conversions using Sharp
+    if (['jpg', 'jpeg', 'png', 'tiff', 'bmp', 'webp', 'avif'].includes(format)) {
         let sharpInstance = sharp(file.path);
         
         // Handle HEIC files
@@ -621,10 +586,8 @@ async function convertSingleFile(file, inputExt, format, outputPath) {
             case 'avif':
                 await sharpInstance.avif({ quality: 90 }).toFile(outputPath);
                 break;
-            case 'gif':
-                await sharpInstance.gif().toFile(outputPath);
-                break;
             case 'bmp':
+                // Use PNG format for BMP as Sharp doesn't support BMP output directly
                 await sharpInstance.png().toFile(outputPath);
                 break;
             default:
