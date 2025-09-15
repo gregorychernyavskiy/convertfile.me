@@ -51,7 +51,8 @@ try {
         totalVisits: 0,
         totalConversions: 0,
         totalCombines: 0,
-        totalPdfToWord: 0
+        totalPdfToWord: 0,
+        totalPdfToImages: 0
     });
     trackEvent = async () => {};
     logUserActivity = async () => {};
@@ -105,6 +106,7 @@ app.get('/api/stats', async (req, res) => {
                 totalConversions: 0,
                 totalCombines: 0,
                 totalPdfToWord: 0,
+                totalPdfToImages: 0,
                 dailyStats: {},
                 lastUpdated: new Date().toISOString()
             };
@@ -123,6 +125,7 @@ app.get('/api/stats', async (req, res) => {
             totalConversions: 0,
             totalCombines: 0,
             totalPdfToWord: 0,
+            totalPdfToImages: 0,
             dailyStats: {},
             lastUpdated: new Date().toISOString(),
             error: 'Database unavailable'
@@ -137,6 +140,7 @@ app.use(async (req, res, next) => {
                        req.path === '/convert' || 
                        req.path === '/combine' || 
                        req.path === '/pdf-to-word' ||
+                       req.path === '/pdf-to-images' ||
                        req.path.endsWith('.html');
     
     if (shouldTrack) {
@@ -157,6 +161,7 @@ app.use(async (req, res, next) => {
                         totalConversions: 0,
                         totalCombines: 0,
                         totalPdfToWord: 0,
+                        totalPdfToImages: 0,
                         dailyStats: {},
                         lastUpdated: new Date().toISOString()
                     };
@@ -255,6 +260,7 @@ app.get('/api/test-tracking', async (req, res) => {
                 totalConversions: 0,
                 totalCombines: 0,
                 totalPdfToWord: 0,
+                totalPdfToImages: 0,
                 dailyStats: {},
                 lastUpdated: new Date().toISOString()
             };
@@ -1089,6 +1095,277 @@ app.post("/pdf-to-word", upload.array("files"), async (req, res) => {
     }
 });
 
+// PDF to Images endpoint
+app.post("/pdf-to-images", upload.array("files"), async (req, res) => {
+    let cleanupFiles = [];
+    
+    try {
+        const clientInfo = extractClientInfo(req);
+        
+        if (!req.files || req.files.length === 0) {
+            // Log failed PDF to Images attempt
+            await logUserActivity({
+                action: 'pdf_to_images_failed',
+                reason: 'no_files',
+                ...clientInfo
+            });
+            return res.status(400).json({ error: "No files uploaded." });
+        }
+
+        // Validate that uploaded files are PDFs
+        const pdfFiles = req.files.filter(file => 
+            file.mimetype === 'application/pdf' || 
+            file.originalname.toLowerCase().endsWith('.pdf')
+        );
+
+        if (pdfFiles.length === 0) {
+            // Log failed PDF to Images attempt
+            await logUserActivity({
+                action: 'pdf_to_images_failed',
+                reason: 'no_pdf_files',
+                uploadedFileTypes: req.files.map(f => f.mimetype),
+                ...clientInfo
+            });
+            return res.status(400).json({ error: "No PDF files found. Please upload PDF files only." });
+        }
+
+        // Track PDF to Images conversion with MongoDB
+        try {
+            await trackEvent('pdfToImages');
+            
+            // Log detailed PDF to Images activity
+            const totalFileSize = pdfFiles.reduce((sum, file) => sum + file.size, 0);
+            await logUserActivity({
+                action: 'pdf_to_images_conversion',
+                fileCount: pdfFiles.length,
+                fileSize: totalFileSize,
+                ...clientInfo
+            });
+        } catch (trackError) {
+            console.error('Error tracking PDF to Images (non-critical):', trackError);
+        }
+        
+        // Add all files to cleanup list
+        cleanupFiles.push(...req.files.map(f => f.path));
+        
+        const format = req.body.output_format || 'png';
+        
+        // Create a ZIP file for all outputs
+        const archiver = require('archiver');
+        const zipPath = path.join('/tmp', `pdf_to_images_${Date.now()}.zip`);
+        cleanupFiles.push(zipPath);
+        
+        const output = fs.createWriteStream(zipPath);
+        const archive = archiver('zip', { zlib: { level: 9 } });
+        
+        archive.pipe(output);
+        
+        let singleImageBuffer = null;
+        let singleImageName = '';
+        let totalImages = 0;
+        
+        // Process each PDF file
+        for (const file of pdfFiles) {
+            try {
+                // Use system-installed pdftocairo directly
+                const { spawn } = require('child_process');
+                
+                // Create output directory for this file
+                const outputDir = path.join('/tmp', `pdf_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
+                fs.mkdirSync(outputDir, { recursive: true });
+                cleanupFiles.push(outputDir);
+                
+                try {
+                    // Use system pdftocairo with proper PATH
+                    const outputBaseName = path.join(outputDir, 'page');
+                    const pdftocairoArgs = [
+                        `-${format}`,
+                        '-scale-to', '1024',
+                        file.path,
+                        outputBaseName
+                    ];
+                    
+                    // Use system pdftocairo with proper PATH
+                    const pdftocairoPath = '/opt/homebrew/bin/pdftocairo';
+                    
+                    await new Promise((resolve, reject) => {
+                        const child = spawn(pdftocairoPath, pdftocairoArgs, {
+                            env: { ...process.env, PATH: '/opt/homebrew/bin:' + process.env.PATH }
+                        });
+                        
+                        let stderr = '';
+                        child.stderr.on('data', (data) => {
+                            stderr += data.toString();
+                        });
+                        
+                        child.on('close', (code) => {
+                            if (code === 0) {
+                                resolve();
+                            } else {
+                                reject(new Error(`pdftocairo exited with code ${code}: ${stderr}`));
+                            }
+                        });
+                        
+                        child.on('error', (err) => {
+                            reject(err);
+                        });
+                    });
+                    
+                    // Read all generated images
+                    const imageFiles = fs.readdirSync(outputDir).filter(f => 
+                        f.startsWith('page') && 
+                        (f.endsWith('.png') || f.endsWith('.jpg') || f.endsWith('.jpeg') || f.endsWith('.tiff') || f.endsWith('.webp'))
+                    );
+                    
+                    if (imageFiles.length > 0) {
+                        const originalName = path.parse(file.originalname).name;
+                        
+                        // Process each generated image
+                        imageFiles.forEach((imageFile, pageIndex) => {
+                            const imagePath = path.join(outputDir, imageFile);
+                            const imageBuffer = fs.readFileSync(imagePath);
+                            
+                            const fileName = imageFiles.length === 1 && pdfFiles.length === 1
+                                ? `${originalName}.${format}`
+                                : `${originalName}_page_${pageIndex + 1}.${format}`;
+                            
+                            archive.append(imageBuffer, { name: fileName });
+                            
+                            // If this is the only image, save it for direct download
+                            if (imageFiles.length === 1 && pdfFiles.length === 1) {
+                                singleImageBuffer = imageBuffer;
+                                singleImageName = fileName;
+                            }
+                            
+                            totalImages++;
+                        });
+                    } else {
+                        throw new Error('No images generated from PDF');
+                    }
+                } catch (popplerError) {
+                    console.error('PDF-Poppler failed, using text extraction fallback:', popplerError.message);
+                    
+                    // Fallback: Extract text and create a simple text image
+                    const pdfParse = require('pdf-parse');
+                    const pdfBuffer = fs.readFileSync(file.path);
+                    const pdfData = await pdfParse(pdfBuffer);
+                    
+                    // Create a simple text representation
+                    const originalName = path.parse(file.originalname).name;
+                    const textContent = `PDF Text Content from: ${file.originalname}\n\n${pdfData.text}`;
+                    
+                    // Create a simple text file as fallback
+                    const textFileName = `${originalName}_text_content.txt`;
+                    archive.append(textContent, { name: textFileName });
+                    
+                    // Also create an error notice
+                    const errorNotice = `PDF to Images conversion requires system dependencies.\n\nTo fix this issue:\n1. Install Cairo: brew install cairo\n2. Install Poppler: brew install poppler\n\nText content has been extracted instead.`;
+                    archive.append(errorNotice, { name: `CONVERSION_INFO_${originalName}.txt` });
+                    
+                    totalImages++;
+                }
+                
+            } catch (fileError) {
+                console.error(`Error converting ${file.originalname}:`, fileError);
+                // Add error file to ZIP
+                archive.append(`Error converting ${file.originalname}: ${fileError.message}\n\nTo fix PDF to Images conversion:\n1. Install Cairo: brew install cairo\n2. Install Poppler: brew install poppler`, { 
+                    name: `ERROR_${file.originalname}.txt` 
+                });
+            }
+        }
+        
+        // If we have only one image, send it directly instead of a ZIP
+        if (totalImages === 1 && singleImageBuffer) {
+            res.setHeader('Content-Disposition', `attachment; filename="${singleImageName}"`);
+            res.setHeader('Content-Type', `image/${format === 'jpg' ? 'jpeg' : format}`);
+            res.send(singleImageBuffer);
+            
+            // Clean up files
+            cleanupFiles.forEach(filePath => {
+                try {
+                    if (fs.existsSync(filePath)) {
+                        if (fs.lstatSync(filePath).isDirectory()) {
+                            fs.rmSync(filePath, { recursive: true, force: true });
+                        } else {
+                            fs.unlinkSync(filePath);
+                        }
+                    }
+                } catch (cleanupError) {
+                    console.error('Cleanup error:', cleanupError);
+                }
+            });
+        } else {
+            // Send ZIP file for multiple images
+            archive.finalize();
+            
+            output.on('close', () => {
+                // Send the ZIP file
+                const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+                const downloadName = pdfFiles.length === 1 
+                    ? `${path.parse(pdfFiles[0].originalname).name}_images.zip`
+                    : `pdf_to_images_${timestamp}.zip`;
+                
+                res.setHeader('Content-Disposition', `attachment; filename="${downloadName}"`);
+                res.setHeader('Content-Type', 'application/zip');
+                
+                const fileStream = fs.createReadStream(zipPath);
+                fileStream.pipe(res);
+                
+                fileStream.on('end', () => {
+                    // Clean up files after sending
+                    cleanupFiles.forEach(filePath => {
+                        try {
+                            if (fs.existsSync(filePath)) {
+                                if (fs.lstatSync(filePath).isDirectory()) {
+                                    fs.rmSync(filePath, { recursive: true, force: true });
+                                } else {
+                                    fs.unlinkSync(filePath);
+                                }
+                            }
+                        } catch (cleanupError) {
+                            console.error('Cleanup error:', cleanupError);
+                        }
+                    });
+                });
+            });
+        }
+
+        console.log(`PDF to Images completed: ${pdfFiles.length} files from ${clientInfo.ip}`);
+
+    } catch (error) {
+        console.error("PDF to Images error:", error);
+        
+        // Clean up on error
+        cleanupFiles.forEach(filePath => {
+            try {
+                if (fs.existsSync(filePath)) {
+                    if (fs.lstatSync(filePath).isDirectory()) {
+                        fs.rmSync(filePath, { recursive: true, force: true });
+                    } else {
+                        fs.unlinkSync(filePath);
+                    }
+                }
+            } catch (cleanupError) {
+                console.error('Cleanup error:', cleanupError);
+            }
+        });
+        
+        // Log PDF to Images error
+        try {
+            const clientInfo = extractClientInfo(req);
+            await logUserActivity({
+                action: 'pdf_to_images_error',
+                error: error.message,
+                ...clientInfo
+            });
+        } catch (logError) {
+            console.error('Error logging PDF to Images error:', logError);
+        }
+        
+        res.status(500).json({ error: error.message || "PDF to Images conversion failed" });
+    }
+});
+
 // Serve static files (CSS, JS, images)
 app.use(express.static(path.join(__dirname, "public")));
 
@@ -1108,6 +1385,10 @@ app.get('/combine', (req, res) => {
 
 app.get('/pdf-to-word', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'pdf-to-word.html'));
+});
+
+app.get('/pdf-to-images', (req, res) => {
+    res.sendFile(path.join(__dirname, 'public', 'pdf-to-images.html'));
 });
 
 // 404 handler

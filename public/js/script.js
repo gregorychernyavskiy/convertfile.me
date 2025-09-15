@@ -138,7 +138,8 @@ document.addEventListener("DOMContentLoaded", function () {
                     totalVisits: 0,
                     totalConversions: 0,
                     totalCombines: 0,
-                    totalPdfToWord: 0
+                    totalPdfToWord: 0,
+                    totalPdfToImages: 0
                 });
             });
     }
@@ -149,7 +150,8 @@ document.addEventListener("DOMContentLoaded", function () {
             totalVisits: document.getElementById('totalVisits'),
             totalConversions: document.getElementById('totalConversions'),
             totalCombines: document.getElementById('totalCombines'),
-            totalPdfToWord: document.getElementById('totalPdfToWord')
+            totalPdfToWord: document.getElementById('totalPdfToWord'),
+            totalPdfToImages: document.getElementById('totalPdfToImages')
         };
 
         console.log('Found elements:', elements);
@@ -540,6 +542,90 @@ document.addEventListener("DOMContentLoaded", function () {
             // Reset button
             if (convertBtn) {
                 convertBtn.textContent = "Convert to Word";
+                convertBtn.disabled = false;
+            }
+        });
+    };
+
+    // PDF to Images conversion function
+    window.convertPdfToImages = function (event) {
+        event.preventDefault();
+        if (selectedFiles.size === 0) {
+            alert("Please select at least one PDF file.");
+            return;
+        }
+        
+        const formatSelect = document.getElementById("formatSelect");
+        if (!formatSelect) {
+            alert("Format selector not found.");
+            return;
+        }
+        
+        const format = formatSelect.value;
+        let formData = new FormData();
+        
+        // Add all PDF files for conversion
+        selectedFiles.forEach(file => {
+            if (file.type === "application/pdf" || file.name.toLowerCase().endsWith('.pdf')) {
+                formData.append("files", file);
+            }
+        });
+        
+        formData.append("output_format", format);
+        
+        // Show loading state
+        const convertBtn = document.querySelector('button[type="submit"]');
+        if (convertBtn) {
+            convertBtn.textContent = "Converting to Images...";
+            convertBtn.disabled = true;
+        }
+        
+        fetch(`${API_BASE_URL}/pdf-to-images`, {
+            method: "POST",
+            body: formData
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(err => {
+                    throw new Error(err.error || "PDF to Images conversion failed.");
+                });
+            }
+            return response.blob();
+        })
+        .then(blob => {
+            const url = window.URL.createObjectURL(blob);
+            const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
+            const fileName = selectedFiles.size === 1 
+                ? Array.from(selectedFiles.values())[0].name.replace(/\.[^/.]+$/, "") + "_images.zip"
+                : `pdf_to_images_${timestamp}.zip`;
+                
+            const downloadLink = document.getElementById("downloadLink");
+            if (downloadLink) {
+                downloadLink.href = url;
+                downloadLink.download = fileName;
+                downloadLink.textContent = "Download Images";
+                downloadLink.style.display = "block";
+                downloadLink.click();
+            }
+            
+            // Clear selected files and reset the file list after successful conversion
+            selectedFiles.clear();
+            if (fileList) fileList.innerHTML = "";
+            updateFileCount();
+            
+            // Reset button
+            if (convertBtn) {
+                convertBtn.textContent = "Convert to Images";
+                convertBtn.disabled = false;
+            }
+        })
+        .catch(error => {
+            console.error("PDF to Images conversion error:", error);
+            alert(error.message || "An error occurred during PDF to Images conversion. Please try again.");
+            
+            // Reset button
+            if (convertBtn) {
+                convertBtn.textContent = "Convert to Images";
                 convertBtn.disabled = false;
             }
         });

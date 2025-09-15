@@ -107,6 +107,7 @@ async function loadStats() {
                 totalConversions: 0,
                 totalCombines: 0,
                 totalPdfToWord: 0,
+                totalPdfToImages: 0,
                 dailyStats: {},
                 lastUpdated: new Date().toISOString()
             };
@@ -122,6 +123,7 @@ async function loadStats() {
             totalConversions: 0,
             totalCombines: 0,
             totalPdfToWord: 0,
+            totalPdfToImages: 0,
             dailyStats: {},
             lastUpdated: new Date().toISOString()
         };
@@ -167,7 +169,8 @@ async function trackEvent(eventType) {
                 visits: 0,
                 conversions: 0,
                 combines: 0,
-                pdfToWord: 0
+                pdfToWord: 0,
+                pdfToImages: 0
             };
         }
         
@@ -188,6 +191,10 @@ async function trackEvent(eventType) {
             case 'pdfToWord':
                 stats.totalPdfToWord++;
                 stats.dailyStats[today].pdfToWord++;
+                break;
+            case 'pdfToImages':
+                stats.totalPdfToImages++;
+                stats.dailyStats[today].pdfToImages++;
                 break;
         }
         

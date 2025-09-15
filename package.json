@@ -26,17 +26,22 @@
   "description": "",
   "dependencies": {
     "archiver": "^7.0.1",
+    "canvas": "^3.2.0",
     "cors": "^2.8.5",
     "docx": "^9.5.1",
     "dotenv": "^17.2.2",
     "express": "^4.21.2",
     "heic-convert": "^2.1.0",
+    "jimp": "^1.6.0",
     "mongodb": "^6.19.0",
     "multer": "^1.4.5-lts.1",
+    "node-canvas-with-twemoji-and-discord-emoji": "^1.2.2",
     "pdf-lib": "^1.17.1",
     "pdf-parse": "^1.1.1",
     "pdf-poppler": "^0.2.1",
+    "pdfjs-dist": "^5.4.149",
     "pizzip": "^3.2.0",
+    "puppeteer-core": "^24.20.0",
     "sharp": "^0.33.5"
   }
 }

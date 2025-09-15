@@ -424,20 +424,24 @@ button:hover {
 
 /* Home page buttons styling */
 #selectionButtons a button {
-    padding: 20px 40px;
-    font-size: 18px;
+    padding: 20px 15px;
+    font-size: 16px;
     background-color: #38BDF8;
     color: white;
     border: none;
     border-radius: 12px;
     cursor: pointer;
-    margin: 0 15px;
+    margin: 0;
     box-shadow: 0 4px 12px rgba(56, 189, 248, 0.3);
     transition: all 0.2s ease;
-    min-width: 160px;
-    height: 70px;
+    width: 100%;
+    height: 80px;
     font-family: 'Poppins', sans-serif;
     font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
 }
 
 #selectionButtons a button:hover {
@@ -451,12 +455,20 @@ button:hover {
 }
 
 .selection-buttons {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 30px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    grid-template-rows: 1fr 1fr;
+    gap: 20px;
     margin-top: 20px;
-    flex-wrap: wrap;
+    width: 100%;
+    max-width: 600px;
+    margin-left: auto;
+    margin-right: auto;
+    padding: 30px;
+    border: 3px dashed #38BDF8;
+    border-radius: 16px;
+    background: var(--drop-area-bg);
+    position: relative;
 }
 
 /* Feature Cards Section - 2x2 Grid Layout */
@@ -785,16 +797,20 @@ button:hover {
     
     /* Better spacing for mobile buttons */
     #selectionButtons a button {
-        padding: 18px 25px;
-        font-size: 16px;
-        margin: 8px;
-        min-width: 140px;
+        padding: 15px 10px;
+        font-size: 14px;
+        margin: 0;
         height: 60px;
+        width: 100%;
     }
     
     .selection-buttons {
+        grid-template-columns: 1fr;
+        grid-template-rows: repeat(4, 1fr);
         gap: 15px;
         margin-top: 15px;
+        padding: 20px;
+        max-width: 100%;
     }
 }
 
