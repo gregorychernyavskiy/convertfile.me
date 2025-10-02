@@ -32,10 +32,6 @@
       "dest": "/api/index.js"
     },
     {
-      "src": "/pdf-to-images",
-      "dest": "/api/index.js"
-    },
-    {
       "src": "/css/(.*)",
       "dest": "/public/css/$1"
     },

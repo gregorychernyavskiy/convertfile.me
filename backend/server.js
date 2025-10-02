@@ -52,7 +52,7 @@ try {
         totalConversions: 0,
         totalCombines: 0,
         totalPdfToWord: 0,
-        totalPdfToImages: 0
+        // totalPdfToImages: 0 // COMMENTED OUT - Vercel not supporting this feature
     });
     trackEvent = async () => {};
     logUserActivity = async () => {};
@@ -106,7 +106,7 @@ app.get('/api/stats', async (req, res) => {
                 totalConversions: 0,
                 totalCombines: 0,
                 totalPdfToWord: 0,
-                totalPdfToImages: 0,
+                // totalPdfToImages: 0, // COMMENTED OUT - Vercel not supporting this feature
                 dailyStats: {},
                 lastUpdated: new Date().toISOString()
             };
@@ -125,7 +125,7 @@ app.get('/api/stats', async (req, res) => {
             totalConversions: 0,
             totalCombines: 0,
             totalPdfToWord: 0,
-            totalPdfToImages: 0,
+            // totalPdfToImages: 0, // COMMENTED OUT - Vercel not supporting this feature
             dailyStats: {},
             lastUpdated: new Date().toISOString(),
             error: 'Database unavailable'
@@ -140,7 +140,7 @@ app.use(async (req, res, next) => {
                        req.path === '/convert' || 
                        req.path === '/combine' || 
                        req.path === '/pdf-to-word' ||
-                       req.path === '/pdf-to-images' ||
+                       // req.path === '/pdf-to-images' || // COMMENTED OUT - Vercel not supporting this feature
                        req.path.endsWith('.html');
     
     if (shouldTrack) {
@@ -161,7 +161,7 @@ app.use(async (req, res, next) => {
                         totalConversions: 0,
                         totalCombines: 0,
                         totalPdfToWord: 0,
-                        totalPdfToImages: 0,
+                        // totalPdfToImages: 0, // COMMENTED OUT - Vercel not supporting this feature
                         dailyStats: {},
                         lastUpdated: new Date().toISOString()
                     };
@@ -260,7 +260,7 @@ app.get('/api/test-tracking', async (req, res) => {
                 totalConversions: 0,
                 totalCombines: 0,
                 totalPdfToWord: 0,
-                totalPdfToImages: 0,
+                // totalPdfToImages: 0, // COMMENTED OUT - Vercel not supporting this feature
                 dailyStats: {},
                 lastUpdated: new Date().toISOString()
             };
@@ -1058,7 +1058,8 @@ app.post("/pdf-to-word", upload.array("files"), async (req, res) => {
     }
 });
 
-// PDF to Images endpoint
+// PDF to Images endpoint - COMMENTED OUT (Vercel not supporting this feature)
+/*
 app.post("/pdf-to-images", upload.array("files"), async (req, res) => {
     let cleanupFiles = [];
     
@@ -1132,125 +1133,49 @@ app.post("/pdf-to-images", upload.array("files"), async (req, res) => {
             try {
                 // Check if we're in Vercel environment
                 const isVercel = process.env.VERCEL || process.env.NOW_REGION;
-                
                 if (isVercel) {
-                    // For Vercel, use pdf2pic library
-                    const pdf2pic = require('pdf2pic');
-                    
-                    const convert = pdf2pic.fromPath(file.path, {
-                        density: 100,
-                        saveFilename: "page",
-                        savePath: "/tmp",
-                        format: format === 'jpg' ? 'jpeg' : format,
-                        width: 1024,
-                        height: 1024
+                    // Use PDF.co API for PDF to images conversion
+                    const axios = require('axios');
+                    const FormData = require('form-data');
+                    const apiKey = process.env.PDFCO_API_KEY || 'gregory.chernyavskiy@gmail.com_4RAvgHGyAmUz41VEQIsV2DUoz3qnWsi4ZkQXwnuZJ5GD8hoBZePNg4Kw0LuUHhHO';
+                    const pdfBuffer = fs.readFileSync(file.path);
+                    const form = new FormData();
+                    form.append('file', pdfBuffer, file.originalname);
+                    form.append('async', 'false');
+                    form.append('pages', '');
+                    form.append('password', '');
+                    form.append('profiles', JSON.stringify({ outputType: format === 'jpg' ? 'jpeg' : format }));
+                    const url = 'https://api.pdf.co/v1/pdf/convert/to/image';
+                    const response = await axios.post(url, form, {
+                        headers: {
+                            ...form.getHeaders(),
+                            'x-api-key': apiKey
+                        },
+                        maxContentLength: Infinity,
+                        maxBodyLength: Infinity
                     });
-                    
-                    try {
-                        const results = await convert.bulk(-1); // Convert all pages
-                        
-                        if (results && results.length > 0) {
-                            const originalName = path.parse(file.originalname).name;
-                            
-                            results.forEach((result, pageIndex) => {
-                                if (result.buffer) {
-                                    const fileName = results.length === 1 && pdfFiles.length === 1
-                                        ? `${originalName}.${format}`
-                                        : `${originalName}_page_${pageIndex + 1}.${format}`;
-                                    
-                                    archive.append(result.buffer, { name: fileName });
-                                    
-                                    // If this is the only image, save it for direct download
-                                    if (results.length === 1 && pdfFiles.length === 1) {
-                                        singleImageBuffer = result.buffer;
-                                        singleImageName = fileName;
-                                    }
-                                    
-                                    totalImages++;
-                                }
-                            });
-                        } else {
-                            throw new Error('No images generated from PDF using pdf2pic');
+                    if (response.data && response.data.urls && response.data.urls.length > 0) {
+                        const originalName = path.parse(file.originalname).name;
+                        for (let i = 0; i < response.data.urls.length; i++) {
+                            const imageUrl = response.data.urls[i];
+                            const imageResp = await axios.get(imageUrl, { responseType: 'arraybuffer' });
+                            const fileName = response.data.urls.length === 1 && pdfFiles.length === 1
+                                ? `${originalName}.${format}`
+                                : `${originalName}_page_${i + 1}.${format}`;
+                            archive.append(Buffer.from(imageResp.data), { name: fileName });
+                            if (response.data.urls.length === 1 && pdfFiles.length === 1) {
+                                singleImageBuffer = Buffer.from(imageResp.data);
+                                singleImageName = fileName;
+                            }
+                            totalImages++;
                         }
-                    } catch (pdf2picError) {
-                        console.error('pdf2pic failed:', pdf2picError.message);
-                        throw pdf2picError;
+                    } else {
+                        throw new Error('No images generated from PDF using PDF.co');
                     }
                 } else {
                     // For local development, use system pdftocairo
                     const { spawn } = require('child_process');
-                    
-                    // Create output directory for this file
-                    const outputDir = path.join('/tmp', `pdf_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`);
-                    fs.mkdirSync(outputDir, { recursive: true });
-                    cleanupFiles.push(outputDir);
-                    
-                    // Use system pdftocairo with proper PATH
-                    const outputBaseName = path.join(outputDir, 'page');
-                    const pdftocairoArgs = [
-                        `-${format}`,
-                        '-scale-to', '1024',
-                        file.path,
-                        outputBaseName
-                    ];
-                    
-                    // Use system pdftocairo with proper PATH
-                    const pdftocairoPath = '/opt/homebrew/bin/pdftocairo';
-                    
-                    await new Promise((resolve, reject) => {
-                        const child = spawn(pdftocairoPath, pdftocairoArgs, {
-                            env: { ...process.env, PATH: '/opt/homebrew/bin:' + process.env.PATH }
-                        });
-                        
-                        let stderr = '';
-                        child.stderr.on('data', (data) => {
-                            stderr += data.toString();
-                        });
-                        
-                        child.on('close', (code) => {
-                            if (code === 0) {
-                                resolve();
-                            } else {
-                                reject(new Error(`pdftocairo exited with code ${code}: ${stderr}`));
-                            }
-                        });
-                        
-                        child.on('error', (err) => {
-                            reject(err);
-                        });
-                    });
-                    
-                    // Read all generated images
-                    const imageFiles = fs.readdirSync(outputDir).filter(f => 
-                        f.startsWith('page') && 
-                        (f.endsWith('.png') || f.endsWith('.jpg') || f.endsWith('.jpeg') || f.endsWith('.tiff') || f.endsWith('.webp'))
-                    );
-                    
-                    if (imageFiles.length > 0) {
-                        const originalName = path.parse(file.originalname).name;
-                        
-                        // Process each generated image
-                        imageFiles.forEach((imageFile, pageIndex) => {
-                            const imagePath = path.join(outputDir, imageFile);
-                            const imageBuffer = fs.readFileSync(imagePath);
-                            
-                            const fileName = imageFiles.length === 1 && pdfFiles.length === 1
-                                ? `${originalName}.${format}`
-                                : `${originalName}_page_${pageIndex + 1}.${format}`;
-                            
-                            archive.append(imageBuffer, { name: fileName });
-                            
-                            // If this is the only image, save it for direct download
-                            if (imageFiles.length === 1 && pdfFiles.length === 1) {
-                                singleImageBuffer = imageBuffer;
-                                singleImageName = fileName;
-                            }
-                            
-                            totalImages++;
-                        });
-                    } else {
-                        throw new Error('No images generated from PDF');
-                    }
+                    // ...existing code...
                 }
                 
             } catch (conversionError) {
@@ -1368,6 +1293,7 @@ app.post("/pdf-to-images", upload.array("files"), async (req, res) => {
         res.status(500).json({ error: error.message || "PDF to Images conversion failed" });
     }
 });
+*/
 
 // Serve static files (CSS, JS, images)
 app.use(express.static(path.join(__dirname, "..", "public")));
@@ -1390,9 +1316,12 @@ app.get('/pdf-to-word', (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'public', 'pdf-to-word.html'));
 });
 
+// PDF to Images page route - COMMENTED OUT (Vercel not supporting this feature)
+/*
 app.get('/pdf-to-images', (req, res) => {
     res.sendFile(path.join(__dirname, '..', 'public', 'pdf-to-images.html'));
 });
+*/
 
 // 404 handler
 app.use('*', (req, res) => {

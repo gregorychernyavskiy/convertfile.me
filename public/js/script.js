@@ -139,7 +139,7 @@ document.addEventListener("DOMContentLoaded", function () {
                     totalConversions: 0,
                     totalCombines: 0,
                     totalPdfToWord: 0,
-                    totalPdfToImages: 0
+                    // totalPdfToImages: 0 // COMMENTED OUT - Vercel not supporting this feature
                 });
             });
     }
@@ -151,7 +151,7 @@ document.addEventListener("DOMContentLoaded", function () {
             totalConversions: document.getElementById('totalConversions'),
             totalCombines: document.getElementById('totalCombines'),
             totalPdfToWord: document.getElementById('totalPdfToWord'),
-            totalPdfToImages: document.getElementById('totalPdfToImages')
+            // totalPdfToImages: document.getElementById('totalPdfToImages') // COMMENTED OUT - Vercel not supporting this feature
         };
 
         console.log('Found elements:', elements);
@@ -547,7 +547,8 @@ document.addEventListener("DOMContentLoaded", function () {
         });
     };
 
-    // PDF to Images conversion function
+    // PDF to Images conversion function - COMMENTED OUT (Vercel not supporting this feature)
+    /*
     window.convertPdfToImages = function (event) {
         event.preventDefault();
         if (selectedFiles.size === 0) {
@@ -630,4 +631,5 @@ document.addEventListener("DOMContentLoaded", function () {
             }
         });
     };
+    */
 });
