@@ -383,14 +383,11 @@ app.post("/convert", upload.array("files"), async (req, res) => {
             });
         } else {
             // Multiple files conversion - create a ZIP
-            const archiver = require('archiver');
+            const { createCompatibleZip } = require('./utils/compatibleZip');
             const zipPath = path.join('/tmp', `converted_files_${Date.now()}.zip`);
             cleanupFiles.push(zipPath);
             
-            const output = fs.createWriteStream(zipPath);
-            const archive = archiver('zip', { zlib: { level: 9 } });
-            
-            archive.pipe(output);
+            let convertedFiles = [];
             
             // Process each file
             for (let i = 0; i < req.files.length; i++) {
@@ -405,23 +402,33 @@ app.post("/convert", upload.array("files"), async (req, res) => {
                     // Convert the file
                     await convertSingleFile(file, inputExt, format, outputPath);
                     
-                    // Add to ZIP
+                    // Read converted file and add to collection
+                    const convertedBuffer = fs.readFileSync(outputPath);
                     const originalName = path.parse(file.originalname).name;
                     const convertedFileName = `${originalName}.${format}`;
-                    archive.file(outputPath, { name: convertedFileName });
+                    
+                    convertedFiles.push({
+                        buffer: convertedBuffer,
+                        name: convertedFileName
+                    });
                     
                 } catch (fileError) {
                     console.error(`Error converting ${file.originalname}:`, fileError);
-                    // Add error file to ZIP
-                    archive.append(`Error converting ${file.originalname}: ${fileError.message}`, { 
-                        name: `ERROR_${file.originalname}.txt` 
+                    // Add error file to collection
+                    convertedFiles.push({
+                        buffer: Buffer.from(`Error converting ${file.originalname}: ${fileError.message}`, 'utf8'),
+                        name: `ERROR_${file.originalname}.txt`
                     });
                 }
             }
             
-            archive.finalize();
-            
-            output.on('close', () => {
+            // Create ZIP file with converted files
+            try {
+                await createCompatibleZip({
+                    outputPath: zipPath,
+                    files: convertedFiles
+                });
+                
                 // Send the ZIP file
                 const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
                 const downloadName = `converted_files_${timestamp}.zip`;
@@ -444,7 +451,11 @@ app.post("/convert", upload.array("files"), async (req, res) => {
                         }
                     });
                 });
-            });
+                
+            } catch (zipError) {
+                console.error('ZIP creation failed:', zipError);
+                throw new Error(`Failed to create ZIP file: ${zipError.message}`);
+            }
         }
 
         console.log(`Conversion completed: ${req.files.length} file(s) to ${format} from ${clientInfo.ip}`);
@@ -949,14 +960,11 @@ app.post("/pdf-to-word", upload.array("files"), async (req, res) => {
             
         } else {
             // Multiple files - create a ZIP
-            const archiver = require('archiver');
-            const zipPath = path.join('/tmp', `converted_${Date.now()}.zip`);
+            const { createCompatibleZip } = require('./utils/compatibleZip');
+            const zipPath = path.join('/tmp', `converted_pdfs_${Date.now()}.zip`);
             cleanupFiles.push(zipPath);
             
-            const output = fs.createWriteStream(zipPath);
-            const archive = archiver('zip', { zlib: { level: 9 } });
-            
-            archive.pipe(output);
+            let convertedDocuments = [];
             
             // Process each PDF file
             for (let i = 0; i < pdfFiles.length; i++) {
@@ -987,20 +995,29 @@ app.post("/pdf-to-word", upload.array("files"), async (req, res) => {
                     
                     const buffer = await Packer.toBuffer(doc);
                     const originalName = path.parse(file.originalname).name;
-                    archive.append(buffer, { name: `${originalName}.docx` });
+                    
+                    convertedDocuments.push({
+                        buffer: buffer,
+                        name: `${originalName}.docx`
+                    });
                     
                 } catch (fileError) {
                     console.error(`Error converting ${file.originalname}:`, fileError);
-                    // Add error file to ZIP
-                    archive.append(`Error converting ${file.originalname}: ${fileError.message}`, { 
-                        name: `ERROR_${file.originalname}.txt` 
+                    // Add error file to collection
+                    convertedDocuments.push({
+                        buffer: Buffer.from(`Error converting ${file.originalname}: ${fileError.message}`, 'utf8'),
+                        name: `ERROR_${file.originalname}.txt`
                     });
                 }
             }
             
-            archive.finalize();
-            
-            output.on('close', () => {
+            // Create ZIP file with converted documents
+            try {
+                await createCompatibleZip({
+                    outputPath: zipPath,
+                    files: convertedDocuments
+                });
+                
                 // Send the ZIP file
                 const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
                 const downloadName = `converted_pdfs_${timestamp}.zip`;
@@ -1023,7 +1040,11 @@ app.post("/pdf-to-word", upload.array("files"), async (req, res) => {
                         }
                     });
                 });
-            });
+                
+            } catch (zipError) {
+                console.error('ZIP creation failed:', zipError);
+                throw new Error(`Failed to create ZIP file: ${zipError.message}`);
+            }
         }
 
         console.log(`PDF to Word completed: ${pdfFiles.length} files from ${clientInfo.ip}`);
@@ -1113,19 +1134,15 @@ app.post("/pdf-to-images", upload.array("files"), async (req, res) => {
         
         const format = req.body.output_format || 'png';
         
-        // Create a ZIP file for all outputs
-        const archiver = require('archiver');
+        // Collect all image files first, then create ZIP
+        const { createCompatibleZip } = require('./utils/compatibleZip');
         const zipPath = path.join('/tmp', `pdf_to_images_${Date.now()}.zip`);
         cleanupFiles.push(zipPath);
-        
-        const output = fs.createWriteStream(zipPath);
-        const archive = archiver('zip', { zlib: { level: 9 } });
-        
-        archive.pipe(output);
         
         let singleImageBuffer = null;
         let singleImageName = '';
         let totalImages = 0;
+        let collectedFiles = []; // Collect files before creating ZIP
         
         // Process each PDF file
         for (const file of pdfFiles) {
@@ -1138,12 +1155,13 @@ app.post("/pdf-to-images", upload.array("files"), async (req, res) => {
                     const pdf2pic = require('pdf2pic');
                     
                     const convert = pdf2pic.fromPath(file.path, {
-                        density: 100,
+                        density: 150,
                         saveFilename: "page",
                         savePath: "/tmp",
                         format: format === 'jpg' ? 'jpeg' : format,
                         width: 1024,
-                        height: 1024
+                        height: 1024,
+                        quality: format === 'jpg' ? 85 : undefined // Only set quality for JPEG
                     });
                     
                     try {
@@ -1153,16 +1171,23 @@ app.post("/pdf-to-images", upload.array("files"), async (req, res) => {
                             const originalName = path.parse(file.originalname).name;
                             
                             results.forEach((result, pageIndex) => {
-                                if (result.buffer) {
+                                if (result.buffer && result.buffer.length > 0) {
                                     const fileName = results.length === 1 && pdfFiles.length === 1
                                         ? `${originalName}.${format}`
                                         : `${originalName}_page_${pageIndex + 1}.${format}`;
                                     
-                                    archive.append(result.buffer, { name: fileName });
+                                    // Ensure we have a valid buffer
+                                    const validBuffer = Buffer.isBuffer(result.buffer) ? result.buffer : Buffer.from(result.buffer);
+                                    
+                                    // Collect file for later ZIP creation
+                                    collectedFiles.push({
+                                        buffer: validBuffer,
+                                        name: fileName
+                                    });
                                     
                                     // If this is the only image, save it for direct download
                                     if (results.length === 1 && pdfFiles.length === 1) {
-                                        singleImageBuffer = result.buffer;
+                                        singleImageBuffer = validBuffer;
                                         singleImageName = fileName;
                                     }
                                     
@@ -1190,6 +1215,7 @@ app.post("/pdf-to-images", upload.array("files"), async (req, res) => {
                     const pdftocairoArgs = [
                         `-${format}`,
                         '-scale-to', '1024',
+                        '-r', '150',  // Set resolution explicitly
                         file.path,
                         outputBaseName
                     ];
@@ -1232,21 +1258,31 @@ app.post("/pdf-to-images", upload.array("files"), async (req, res) => {
                         // Process each generated image
                         imageFiles.forEach((imageFile, pageIndex) => {
                             const imagePath = path.join(outputDir, imageFile);
-                            const imageBuffer = fs.readFileSync(imagePath);
                             
-                            const fileName = imageFiles.length === 1 && pdfFiles.length === 1
-                                ? `${originalName}.${format}`
-                                : `${originalName}_page_${pageIndex + 1}.${format}`;
-                            
-                            archive.append(imageBuffer, { name: fileName });
-                            
-                            // If this is the only image, save it for direct download
-                            if (imageFiles.length === 1 && pdfFiles.length === 1) {
-                                singleImageBuffer = imageBuffer;
-                                singleImageName = fileName;
+                            // Verify file exists and is readable
+                            if (fs.existsSync(imagePath)) {
+                                const imageBuffer = fs.readFileSync(imagePath);
+                                
+                                if (imageBuffer && imageBuffer.length > 0) {
+                                    const fileName = imageFiles.length === 1 && pdfFiles.length === 1
+                                        ? `${originalName}.${format}`
+                                        : `${originalName}_page_${pageIndex + 1}.${format}`;
+                                    
+                                    // Collect file for later ZIP creation
+                                    collectedFiles.push({
+                                        buffer: imageBuffer,
+                                        name: fileName
+                                    });
+                                    
+                                    // If this is the only image, save it for direct download
+                                    if (imageFiles.length === 1 && pdfFiles.length === 1) {
+                                        singleImageBuffer = imageBuffer;
+                                        singleImageName = fileName;
+                                    }
+                                    
+                                    totalImages++;
+                                }
                             }
-                            
-                            totalImages++;
                         });
                     } else {
                         throw new Error('No images generated from PDF');
@@ -1267,11 +1303,17 @@ app.post("/pdf-to-images", upload.array("files"), async (req, res) => {
                 
                 // Create a simple text file as fallback
                 const textFileName = `${originalName}_text_content.txt`;
-                archive.append(textContent, { name: textFileName });
+                collectedFiles.push({
+                    buffer: Buffer.from(textContent, 'utf8'),
+                    name: textFileName
+                });
                 
                 // Also create an error notice
                 const errorNotice = `PDF to Images conversion failed.\n\nError: ${conversionError.message}\n\nText content has been extracted instead.`;
-                archive.append(errorNotice, { name: `CONVERSION_INFO_${originalName}.txt` });
+                collectedFiles.push({
+                    buffer: Buffer.from(errorNotice, 'utf8'),
+                    name: `CONVERSION_INFO_${originalName}.txt`
+                });
                 
                 totalImages++;
             }
@@ -1298,10 +1340,13 @@ app.post("/pdf-to-images", upload.array("files"), async (req, res) => {
                 }
             });
         } else {
-            // Send ZIP file for multiple images
-            archive.finalize();
-            
-            output.on('close', () => {
+            // Create ZIP file with collected files
+            try {
+                await createCompatibleZip({
+                    outputPath: zipPath,
+                    files: collectedFiles
+                });
+                
                 // Send the ZIP file
                 const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-');
                 const downloadName = pdfFiles.length === 1 
@@ -1330,7 +1375,11 @@ app.post("/pdf-to-images", upload.array("files"), async (req, res) => {
                         }
                     });
                 });
-            });
+                
+            } catch (zipError) {
+                console.error('ZIP creation failed:', zipError);
+                throw new Error(`Failed to create ZIP file: ${zipError.message}`);
+            }
         }
 
         console.log(`PDF to Images completed: ${pdfFiles.length} files from ${clientInfo.ip}`);
