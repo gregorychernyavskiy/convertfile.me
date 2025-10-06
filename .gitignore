@@ -126,3 +126,20 @@ Thumbs.db
 logs
 *.log
 .vercel
+
+# Terraform
+terraform/
+*.tfstate
+*.tfstate.*
+*.tfplan
+*.tfvars
+!*.tfvars.example
+
+# AWS
+.aws/
+
+# Docker
+.dockerignore
+
+# Lambda deployment packages
+*.zip
